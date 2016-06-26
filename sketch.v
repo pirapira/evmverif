@@ -4,7 +4,26 @@
 (* Yoichi Hirai i@yoichihirai.com
    Creative Commons Attribution-ShareAlike 4.0 International License *)
 
-(* This is just a sketch of an idea. *)
+(* This is just a sketch of an idea put together on a weekend.
+   In the interactive theorem prover Coq, I (re)started reasoning
+   about a contract’s behaviour where it can be called, returned
+   from a call, and of course re-entered.
+
+   My first example is a contract that always returns, for which I
+   - wrote a specification [always_return]
+   - wrote some EVM code [example1_program]
+   - proved that the code satisfies the specification. [example1_spec_impl_match]
+
+   Don’t take it seriously: I haven’t checked anything against the real implementation.
+
+   - explore other strategies modelling the infinite process
+     (an Ethereum contract goes through unlimited number of events),
+   - translate more parts of the yellow paper: more instructions, and the gas economics
+   - check the translation against real blockchain data
+   - verify gradually more complex contracts
+   - develop proof methodology.
+*)
+
 (* Gas is not considered among many things.  A contract in reality dies more often than described here. *)
 
 
