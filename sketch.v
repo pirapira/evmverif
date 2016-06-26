@@ -125,6 +125,24 @@ with contract_behavior :=
 .
 
 
+(* A useful function for reasoning.
+   I was looking at http://adam.chlipala.net/cpdt/html/Coinductive.html
+   around [frob].
+ *)
+Definition contract_action_expander (ca : contract_behavior) :=
+  match ca with ContractAction a b => ContractAction a b end.
+
+Lemma contract_action_expander_eq :
+  forall ca, contract_action_expander ca = ca.
+Proof.
+  intro ca.
+  case ca.
+  auto.
+Qed.
+
+
+
+
 (**** Now we are able to specify contractsin terms of how they behave over
       many invocations, returns from calls and even re-entrance! ***)
 
@@ -620,21 +638,6 @@ Section Example1_Continue.
        account_storage := empty_storage ;
        account_code := example1_program ;
        account_ongoing_calls := nil |}.
-
-  (* build_envs_called needs to be defined *)
-  (* program_result_approximate needs to be defined *)
-
-  Definition contract_action_expander (ca : contract_behavior) :=
-    match ca with ContractAction a b => ContractAction a b end.
-
-
-  Lemma contract_action_expander_eq :
-    forall ca, contract_action_expander ca = ca.
-  Proof.
-    intro ca.
-    case ca.
-    auto.
-  Qed.
 
   Require Coq.Setoids.Setoid.
   Lemma always_return_def :
