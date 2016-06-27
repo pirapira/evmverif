@@ -331,6 +331,9 @@ Axiom cut_memory_zero_nil :
 
 Definition storage := word -> word.
 
+Definition empty_storage : storage :=
+  fun _ => word_zero.
+
 Record variable_env :=
   { venv_stack : list word
   ; venv_memory : memory_state
@@ -525,9 +528,9 @@ Definition account_state_update_storage new_st orig :=
 
 (** The ideas is that an account state defines a response_to_world **)
 
-Definition build_envs_called (a : account_state) (env : call_env) :
-  (variable_env * constant_env) :=
-  ({|
+Definition build_venv_called (a : account_state) (env : call_env) :
+  variable_env :=
+  {|
       venv_stack := nil ;
       venv_memory := empty_memory;
       venv_prg_sfx := a.(account_code) ;
@@ -535,13 +538,14 @@ Definition build_envs_called (a : account_state) (env : call_env) :
       venv_balance := env.(callenv_balance) ;
       venv_caller := env.(callenv_caller) ;
       venv_value_sent := env.(callenv_value)
-   |}
-   ,
+   |}.
+
+Definition build_cenv_called (a : account_state) (env : call_env) :
+    constant_env :=
     {|
       cenv_program := a.(account_code) ;
       cenv_this := a.(account_address)
-   |}
-  ).
+   |}.
 
 
 Axiom build_envs_returned : account_state -> return_result -> option (variable_env * constant_env).
@@ -576,12 +580,13 @@ Definition program_result_approximate (a : program_result) (b : program_result)
 
 Definition respond_to_call_correctly c a account_state_responds_to_world :=
       (forall (callenv : call_env)
-          act continuation venv cenv,
-          (venv, cenv) = build_envs_called a callenv ->
+          act continuation,
           c callenv = ContractAction act continuation ->
           exists pushed_venv, exists st, exists bal,
             (forall steps, program_result_approximate
-             (program_sem venv cenv steps) (ProgramToWorld act st bal pushed_venv)) /\
+             (program_sem (build_venv_called a callenv)
+                          (build_cenv_called a callenv) steps)
+             (ProgramToWorld act st bal pushed_venv)) /\
               account_state_responds_to_world
                 (account_state_update_storage st (update_account_state a pushed_venv))
                                           continuation).
@@ -629,7 +634,7 @@ CoInductive account_state_responds_to_world :
 .
 
 
-Section Example1_Continue.
+Section Example1Continue.
 (*** prove that example 1 has an implementation  *)
 
   Definition return_result_nil : return_result := nil.
@@ -643,8 +648,6 @@ Section Example1_Continue.
       action_example_1.
 
   Variable example1_address : address.
-  Definition empty_storage : storage :=
-    fun _ => word_zero.
 
   Definition example1_program : list instruction :=
     PUSH1 word_zero ::
@@ -682,8 +685,8 @@ Section Example1_Continue.
       unfold respond_to_call_correctly.
       intros.
       exists None.
-      exists venv.(venv_storage).
-      exists venv.(venv_balance).
+      exists example1_account_state.(account_storage).
+      exists callenv.(callenv_balance).
       split.
       {
         intro.
@@ -694,25 +697,19 @@ Section Example1_Continue.
         }
         intro n; case n.
         {
-          unfold program_result_approximate.
-          inversion H; subst.
+          left.
           auto.
         }
         intro m; case m.
         {
-          unfold program_result_approximate.
-          (* sorry I use automatically generated names. *)
-          inversion H; subst.
+          left.
           auto.
         }
         intro.
+        simpl.
+        unfold action_example_1 in H.
+        rewrite always_return_def in H.
         inversion H; subst.
-        simpl.
-        unfold venv_update_stack.
-        simpl.
-        unfold action_example_1 in H0.
-        rewrite always_return_def in H0.
-        inversion H0; subst.
         unfold venv_advance_pc; simpl.
         unfold venv_returned_bytes; simpl.
         unfold program_result_approximate.
@@ -724,11 +721,9 @@ Section Example1_Continue.
       }
       {
         unfold update_account_state.
-        unfold action_example_1 in H0.
-        rewrite always_return_def in H0.
-        inversion H0; subst.
-        unfold build_envs_called in H.
-        inversion H; subst; simpl.
+        unfold action_example_1 in H.
+        rewrite always_return_def in H.
+        inversion H; subst.
         apply example1_spec_impl_match.
       }
     }
@@ -746,4 +741,4 @@ Section Example1_Continue.
     }
   Qed.
 
-End Example1_Continue.
+End Example1Continue.
