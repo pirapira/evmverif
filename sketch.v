@@ -41,6 +41,7 @@ Axiom word_one : word.
 Axiom word_zero : word.
 Axiom word_iszero : word -> bool.
 Axiom word_smaller : word -> word -> bool.
+Axiom word_of_nat : nat -> word.
 
 Definition bool_to_word (b : bool) :=
   if b then word_one else word_zero.
@@ -164,6 +165,13 @@ Qed.
 
 (**** Now we are able to specify contractsin terms of how they behave over
       many invocations, returns from calls and even re-entrance! ***)
+
+(* Example 0: a contract that always fails *)
+CoFixpoint always_fail :=
+  ContractAction ContractFail
+                 (Respond (fun _ => always_fail)
+                          (fun _ => always_fail)
+                          always_fail).
 
 (* Example 1: a contract that always returns *)
 CoFixpoint always_return x :=
@@ -292,6 +300,7 @@ Inductive instruction :=
 | PUSH1 : word -> instruction
 | SLOAD
 | SSTORE
+| JUMP
 | IJUMP
 | CALLDATASIZE
 | ADD
@@ -420,6 +429,7 @@ Axiom stack_2_1_op: variable_env -> constant_env ->
 Axiom sload : variable_env -> word -> word.
 Axiom sstore : variable_env -> constant_env -> instruction_result.
 Axiom ijump : variable_env -> constant_env -> instruction_result.
+Axiom jump : variable_env -> constant_env -> instruction_result.
 Axiom datasize : variable_env -> word.
 
 Definition call (v : variable_env) (c : constant_env) : instruction_result :=
@@ -477,6 +487,7 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | SLOAD => stack_1_1_op v c (sload v)
   | SSTORE => sstore v c
   | IJUMP => ijump v c
+  | JUMP => jump v c
   | CALLDATASIZE => stack_0_1_op v c (datasize v)
   | ADD => stack_2_1_op v c word_add
   | SUB => stack_2_1_op v c word_sub
@@ -632,6 +643,36 @@ CoInductive account_state_responds_to_world :
       respond_to_fail_correctly f a account_state_responds_to_world ->
     account_state_responds_to_world a (Respond c r f)
 .
+
+
+Section Example0Continue.
+
+  Definition spec_example_0 : responce_to_world :=
+    Respond
+      (fun _ => always_fail)
+      (fun _ => always_fail)
+      always_fail.
+
+  Variable example0_address : address.
+
+  Definition example0_program :=
+    PUSH1 (word_of_nat 0) ::
+    JUMP :: nil.
+
+  Definition example0_account_state :=
+    {| account_address := example0_address ;
+       account_storage := empty_storage ;
+       account_code := example0_program ;
+       account_ongoing_calls := nil |}.
+
+  Theorem example0_spec_impl_match :
+    account_state_responds_to_world
+      example0_account_state spec_example_0.
+  Proof.
+    cofix.
+  Admitted.
+
+End Example0Continue.
 
 
 Section Example1Continue.
