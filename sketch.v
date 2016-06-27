@@ -551,7 +551,7 @@ Definition build_venv_called (a : account_state) (env : call_env) :
       venv_value_sent := env.(callenv_value)
    |}.
 
-Definition build_cenv_called (a : account_state) (env : call_env) :
+Definition build_cenv (a : account_state) :
     constant_env :=
     {|
       cenv_program := a.(account_code) ;
@@ -559,15 +559,15 @@ Definition build_cenv_called (a : account_state) (env : call_env) :
    |}.
 
 
-Axiom build_envs_returned : account_state -> return_result -> option (variable_env * constant_env).
+Axiom build_venv_returned : account_state -> return_result -> option variable_env.
 Axiom account_no_call_never_return :
   forall a r,
-    a.(account_ongoing_calls) = nil -> build_envs_returned a r = None.
+    a.(account_ongoing_calls) = nil -> build_venv_returned a r = None.
 
-Axiom build_envs_fail : account_state -> option (variable_env * constant_env).
+Axiom build_venv_fail : account_state -> option variable_env.
 Axiom account_no_call_never_fail :
   forall a,
-    a.(account_ongoing_calls) = nil -> build_envs_fail a = None.
+    a.(account_ongoing_calls) = nil -> build_venv_fail a = None.
 
 (* Axiom update_account_state : account_state -> option variable_env -> account_state. *)
 
@@ -596,7 +596,7 @@ Definition respond_to_call_correctly c a account_state_responds_to_world :=
           exists pushed_venv, exists st, exists bal,
             (forall steps, program_result_approximate
              (program_sem (build_venv_called a callenv)
-                          (build_cenv_called a callenv) steps)
+                          (build_cenv a) steps)
              (ProgramToWorld act st bal pushed_venv)) /\
               account_state_responds_to_world
                 (account_state_update_storage st (update_account_state a pushed_venv))
@@ -606,7 +606,7 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
            (a : account_state)
            (account_state_responds_to_world : account_state -> responce_to_world -> Prop) :=
   forall (rr : return_result) venv cenv continuation act,
-     Some (venv, cenv) = build_envs_returned a rr ->
+     Some venv = build_venv_returned a rr ->
      r rr = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
      (forall steps,
@@ -620,7 +620,7 @@ Definition respond_to_fail_correctly (f : contract_behavior)
            (a : account_state)
            (account_state_responds_to_world : account_state -> responce_to_world -> Prop) :=
   forall (rr : return_result) venv cenv continuation act,
-     Some (venv, cenv) = build_envs_fail a ->
+     Some venv = build_venv_fail a ->
      f = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
      (forall steps,
@@ -769,15 +769,13 @@ Section Example1Continue.
       }
     }
     {
-      unfold respond_to_return_correctly.
-      intros.
-      rewrite account_no_call_never_return in H; auto.
+      intros ? ? ? ? ?.
+      rewrite account_no_call_never_return; auto.
       congruence.
     }
     {
-      unfold respond_to_fail_correctly.
-      intros.
-      rewrite account_no_call_never_fail in H; auto.
+      intros ? ? ? ?.
+      rewrite account_no_call_never_fail; auto.
       congruence.
     }
   Qed.
