@@ -665,11 +665,58 @@ Section Example0Continue.
        account_code := example0_program ;
        account_ongoing_calls := nil |}.
 
+
+  Axiom always_fail_eq :
+    forall act continuation,
+      always_fail = ContractAction act continuation ->
+      act = ContractFail /\
+      continuation = Respond (fun _ => always_fail)
+                             (fun _ => always_fail)
+                             always_fail.
+
+  (** learned from https://github.com/uwplse/verdi/blob/master/PROOF_ENGINEERING.md **)
+  Ltac always_fail_tac :=
+    match goal with
+      [ H: always_fail = ContractAction ?act ?continuation |- _ ] =>
+      apply always_fail_eq in H; destruct H; subst
+    end.
+
   Theorem example0_spec_impl_match :
     account_state_responds_to_world
       example0_account_state spec_example_0.
   Proof.
     cofix.
+    apply AccountStep.
+    {
+      intros ? ? ? ?.
+      always_fail_tac.
+      eexists.
+      eexists.
+      eexists.
+      split.
+      {
+        intros steps.
+        case steps as [ | steps]; (try left; auto).
+        case steps as [ | steps]; (try left; auto).
+        admit.
+      }
+      {
+        admit.
+      }
+    }
+    {
+      unfold respond_to_return_correctly.
+      intros rr venv cenv continuation act.
+      rewrite account_no_call_never_return; auto.
+      congruence.
+    }
+    {
+      unfold respond_to_fail_correctly.
+      intros venv cenv continuation act.
+      rewrite account_no_call_never_fail; auto.
+      congruence.
+    }
+
   Admitted.
 
 End Example0Continue.
