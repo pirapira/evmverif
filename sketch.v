@@ -763,6 +763,30 @@ Section Example1Continue.
     auto.
   Qed.
 
+  Lemma always_return_eq :
+    forall act continuation x,
+      always_return x = ContractAction act continuation ->
+      act = ContractReturn x /\
+      continuation = Respond (fun _ => always_return x)
+                             (fun _ => always_return x)
+                             (always_return x).
+  Proof.
+    intros ? ? ?.
+    rewrite always_return_def at 1.
+    intro H.
+    inversion H; subst.
+    auto.
+  Qed.
+
+  (** learned from https://github.com/uwplse/verdi/blob/master/PROOF_ENGINEERING.md **)
+  Ltac always_return_tac :=
+    match goal with
+      [ H: always_return ?x = ContractAction ?act ?continuation |- _ ] =>
+      apply always_return_eq in H; destruct H; subst
+    end.
+
+
+
   Theorem example1_spec_impl_match :
     account_state_responds_to_world
       example1_account_state spec_example_1.
@@ -778,40 +802,23 @@ Section Example1Continue.
       split.
       {
         intro.
-        case steps.
-        {
-          unfold program_result_approximate.
-          auto.
-        }
-        intro n; case n.
-        {
-          left.
-          auto.
-        }
-        intro m; case m.
-        {
-          left.
-          auto.
-        }
-        intro.
-        simpl.
+        case steps as [|steps]; [left; auto | ].
+        case steps as [|steps]; [left; auto | ].
+        case steps as [|steps]; [left; auto | ].
         unfold action_example_1 in H.
-        rewrite always_return_def in H.
-        inversion H; subst.
+        always_return_tac.
+        right.
+        unfold build_venv_called; simpl.
         unfold venv_advance_pc; simpl.
         unfold venv_returned_bytes; simpl.
-        unfold program_result_approximate.
-        right.
         f_equal.
         f_equal.
         rewrite cut_memory_zero_nil.
         auto.
       }
       {
-        unfold update_account_state.
         unfold action_example_1 in H.
-        rewrite always_return_def in H.
-        inversion H; subst.
+        always_return_tac.
         apply example1_spec_impl_match.
       }
     }
