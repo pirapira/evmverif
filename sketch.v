@@ -725,9 +725,9 @@ Section Example1Continue.
     { (* call case *)
       unfold respond_to_call_correctly.
       intros.
-      exists None.
-      exists example1_account_state.(account_storage).
-      exists callenv.(callenv_balance).
+      eexists.
+      eexists.
+      eexists.
       split.
       {
         intro.
