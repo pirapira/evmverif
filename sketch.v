@@ -43,6 +43,9 @@ Axiom word_iszero : word -> bool.
 Axiom word_smaller : word -> word -> bool.
 Axiom word_of_nat : nat -> word.
 Axiom nat_of_word : word -> nat.
+Axiom nat_of_word_of_nat :
+  (* This 10000 is a bit arbitrary.  I should use BinNat and use 2^256 *)
+  forall n, n < 10000 -> nat_of_word (word_of_nat n) = n.
 
 Definition bool_to_word (b : bool) :=
   if b then word_one else word_zero.
@@ -303,6 +306,7 @@ Inductive instruction :=
 | SSTORE
 | JUMP
 | IJUMP
+| JUMPDEST
 | CALLDATASIZE
 | ADD
 | SUB
@@ -453,6 +457,10 @@ Definition venv_first_instruction (v : variable_env) : option instruction :=
 (** a general functoin for defining an instruction that
     pushes one element to the stack *)
 
+Definition stack_0_0_op (v : variable_env) (c : constant_env)
+  : instruction_result :=
+  InstructionContinue (venv_advance_pc v).
+
 Definition stack_0_1_op (v : variable_env) (c : constant_env) (w : word) : instruction_result :=
   InstructionContinue
     (venv_advance_pc (venv_update_stack (w :: v.(venv_stack)) v)).
@@ -474,7 +482,8 @@ Definition jump (v : variable_env) (c : constant_env) : instruction_result :=
   | Some pos =>
     let v_new := venv_change_sfx (nat_of_word pos) (venv_pop_stack 1 v) c in
     match venv_first_instruction v_new with
-    | Some JUMPDEST => InstructionContinue v_new
+    | Some JUMPDEST =>
+        InstructionContinue v_new
     | _ => instruction_failure_result
     end
   end.
@@ -537,6 +546,7 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | SSTORE => sstore v c
   | IJUMP => ijump v c
   | JUMP => jump v c
+  | JUMPDEST => stack_0_0_op v c
   | CALLDATASIZE => stack_0_1_op v c (datasize v)
   | ADD => stack_2_1_op v c word_add
   | SUB => stack_2_1_op v c word_sub
@@ -608,11 +618,13 @@ Definition build_cenv (a : account_state) :
    |}.
 
 
+(* must push 1 to the stack.  balance should be updated. *)
 Axiom build_venv_returned : account_state -> return_result -> option variable_env.
 Axiom account_no_call_never_return :
   forall a r,
     a.(account_ongoing_calls) = nil -> build_venv_returned a r = None.
 
+(* must push 0 to the stack.  balance should be updated too *)
 Axiom build_venv_fail : account_state -> option variable_env.
 Axiom account_no_call_never_fail :
   forall a,
@@ -754,12 +766,23 @@ Section Example0Continue.
       split.
       {
         intros steps.
-        case steps as [ | steps]; (try left; auto).
-        case steps as [ | steps]; (try left; auto).
-        admit.
+        case steps as [ | steps]; [ try left; auto | ].
+        case steps as [ | steps]; [ try left; auto | ].
+        simpl.
+        unfold jump; simpl.
+        unfold build_venv_called; simpl.
+        unfold venv_update_stack; simpl.
+        unfold venv_change_sfx; simpl.
+        unfold venv_first_instruction; simpl.
+        (* avoid omega somehow ... *)
+        Require Import Omega.
+        rewrite nat_of_word_of_nat; [ | omega].
+        simpl.
+        right.
+        auto.
       }
       {
-        admit.
+        assumption.
       }
     }
     {
@@ -774,8 +797,7 @@ Section Example0Continue.
       rewrite account_no_call_never_fail; auto.
       congruence.
     }
-
-  Admitted.
+  Qed.
 
 End Example0Continue.
 
