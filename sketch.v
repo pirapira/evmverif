@@ -42,6 +42,7 @@ Axiom word_zero : word.
 Axiom word_iszero : word -> bool.
 Axiom word_smaller : word -> word -> bool.
 Axiom word_of_nat : nat -> word.
+Axiom nat_of_word : word -> nat.
 
 Definition bool_to_word (b : bool) :=
   if b then word_one else word_zero.
@@ -388,6 +389,12 @@ Inductive instruction_result :=
 | InstructionToWorld : contract_action -> option variable_env (* to be pushed into the call stack *) -> instruction_result
 .
 
+Definition instruction_failure_result :=
+  InstructionToWorld ContractFail None.
+
+Definition instruction_return_result (x: return_result) :=
+  InstructionToWorld (ContractReturn x) None.
+
 
 Definition venv_update_stack (new_stack : list word) (v : variable_env) :=
   {|
@@ -411,6 +418,37 @@ Definition venv_advance_pc (v : variable_env) :=
     venv_value_sent := v.(venv_value_sent)
   |}.
 
+Require Import List.
+
+Fixpoint venv_pop_stack (n : nat) (v : variable_env) :=
+  match n with
+  | O => v
+  | S m =>
+    venv_update_stack
+      (tl v.(venv_stack))
+      (venv_pop_stack m v)
+  end.
+
+Definition venv_stack_top (v : variable_env) : option word :=
+  match v.(venv_stack) with
+  | h :: _ => Some h
+  | _ => None
+  end.
+
+Definition venv_change_sfx (pos : nat) (v : variable_env)
+  (c : constant_env) : variable_env :=
+  {|
+    venv_stack := v.(venv_stack) ;
+    venv_memory := v.(venv_memory);
+    venv_storage := v.(venv_storage);
+    venv_prg_sfx := drop_bytes c.(cenv_program) pos ;
+    venv_balance := v.(venv_balance);
+    venv_caller := v.(venv_caller);
+    venv_value_sent := v.(venv_value_sent);
+  |}.
+
+Definition venv_first_instruction (v : variable_env) : option instruction :=
+  hd_error v.(venv_prg_sfx).
 
 (** a general functoin for defining an instruction that
     pushes one element to the stack *)
@@ -429,7 +467,18 @@ Axiom stack_2_1_op: variable_env -> constant_env ->
 Axiom sload : variable_env -> word -> word.
 Axiom sstore : variable_env -> constant_env -> instruction_result.
 Axiom ijump : variable_env -> constant_env -> instruction_result.
-Axiom jump : variable_env -> constant_env -> instruction_result.
+
+Definition jump (v : variable_env) (c : constant_env) : instruction_result :=
+  match venv_stack_top v with
+  | None => instruction_failure_result
+  | Some pos =>
+    let v_new := venv_change_sfx (nat_of_word pos) (venv_pop_stack 1 v) c in
+    match venv_first_instruction v_new with
+    | Some JUMPDEST => InstructionContinue v_new
+    | _ => instruction_failure_result
+    end
+  end.
+
 Axiom datasize : variable_env -> word.
 
 Definition call (v : variable_env) (c : constant_env) : instruction_result :=
