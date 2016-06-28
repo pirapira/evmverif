@@ -666,13 +666,22 @@ Section Example0Continue.
        account_ongoing_calls := nil |}.
 
 
-  Axiom always_fail_eq :
+  Require Coq.Setoids.Setoid.
+
+  Lemma always_fail_eq :
     forall act continuation,
       always_fail = ContractAction act continuation ->
       act = ContractFail /\
       continuation = Respond (fun _ => always_fail)
                              (fun _ => always_fail)
                              always_fail.
+  Proof.
+    intros ? ?.
+    rewrite <- (contract_action_expander_eq always_fail) at 1.
+    intro H.
+    inversion H.
+    auto.
+  Qed.
 
   (** learned from https://github.com/uwplse/verdi/blob/master/PROOF_ENGINEERING.md **)
   Ltac always_fail_tac :=
@@ -749,7 +758,6 @@ Section Example1Continue.
        account_code := example1_program ;
        account_ongoing_calls := nil |}.
 
-  Require Coq.Setoids.Setoid.
   Lemma always_return_def :
     forall x,
       always_return x =
