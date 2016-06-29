@@ -422,6 +422,8 @@ Definition venv_advance_pc (v : variable_env) :=
     venv_value_sent := v.(venv_value_sent)
   |}.
 
+Arguments venv_advance_pc v /.
+
 Require Import List.
 
 Fixpoint venv_pop_stack (n : nat) (v : variable_env) :=
@@ -533,6 +535,8 @@ Definition venv_returned_bytes v :=
     | _ => nil
   end.
 
+Arguments venv_returned_bytes v /.
+
 Definition ret (v : variable_env) (c : constant_env) : instruction_result :=
   InstructionToWorld (ContractReturn (venv_returned_bytes v)) None.
 
@@ -609,6 +613,8 @@ Definition build_venv_called (a : account_state) (env : call_env) :
       venv_caller := env.(callenv_caller) ;
       venv_value_sent := env.(callenv_value)
    |}.
+
+Arguments build_venv_called a env /.
 
 Definition build_cenv (a : account_state) :
     constant_env :=
@@ -887,9 +893,7 @@ Section Example1Continue.
         unfold action_example_1 in H.
         always_return_tac.
         right.
-        unfold build_venv_called; simpl.
-        unfold venv_advance_pc; simpl.
-        unfold venv_returned_bytes; simpl.
+        simpl.
         f_equal.
         f_equal.
         rewrite cut_memory_zero_nil.
