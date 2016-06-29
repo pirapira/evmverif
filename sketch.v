@@ -325,7 +325,7 @@ Fixpoint drop_bytes (prog : list instruction) (bytes : nat) {struct bytes} :=
   match prog, bytes with
   | _, O => prog
   | PUSH1 v :: tl, S pre =>
-    drop_bytes tl (pre - 2)
+    drop_bytes tl (pre - 1)
   | _ :: tl, S pre =>
     drop_bytes tl pre
   | nil, S _ => nil
