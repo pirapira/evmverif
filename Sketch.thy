@@ -250,14 +250,18 @@ where
 (* stuck around here *)
 (* try: coinductive mutual definition *)
 
-definition respond_to_call_correctly ::
+coinductive respond_to_call_correctly ::
   "(call_env => contract_behavior) =>
        account_state =>
-       (account_state => responce_to_world => bool) => bool" where
-"respond_to_call_correctly (c :: call_env \<Rightarrow> contract_behavior)
-      (a :: account_state)
-      (account_state_responds_to_world :: account_state => responce_to_world => bool) =
-      (\<forall> (callenv :: call_env)
+       bool"
+   and
+   account_state_responds_to_world ::
+  "account_state => responce_to_world => bool"
+where
+  ASR : "respond_to_call_correctly c a \<Longrightarrow>
+       (* two other conditions missing *)
+       (account_state_responds_to_world a (Respond c r f))"
+| RCC : "(\<forall> (callenv :: call_env)
           (act :: contract_action) (continuation :: responce_to_world).
           c callenv = ContractAction act continuation -->
           (\<exists> pushed_venv st bal.
@@ -267,23 +271,33 @@ definition respond_to_call_correctly ::
              (ProgramToWorld act st bal pushed_venv)) \<and>
             (account_state_responds_to_world
                 ((update_account_state a pushed_venv)\<lparr>account_storage := st\<rparr>)
-                                          continuation)))"
+                                          continuation)))
+                                          \<Longrightarrow> respond_to_call_correctly c a"
 
-  
-function account_state_responds_to_world ::
-  "account_state => responce_to_world => bool" where
-    "(account_state_responds_to_world a (Respond c r f)) =
-     respond_to_call_correctly c a account_state_responds_to_world
-     (* respond_to_return_correctly r a account_state_responds_to_world ==>
-      respond_to_fail_correctly f a account_state_responds_to_world ==> *)
-     "
-apply(auto)
+definition "example0_program =
+    (PUSH1 0 #
+       JUMP # [])"
 
+definition "example0_address" :: address where
+"example0_address = undefined"
+                                          
+definition "example0_account_state =
+    \<lparr> account_address = example0_address,
+       account_storage = empty_storage,
+       account_code = example0_program,
+       account_ongoing_calls = [] \<rparr>"
 
-  
-  
+definition spec_example_0 :: responce_to_world where
+"spec_example_0 =
+    Respond
+      (\<lambda> _. always_fail)
+      (\<lambda> _. always_fail)
+      always_fail"
+
+                                          
 theorem example0_spec_impl_match:
     "account_state_responds_to_world
       example0_account_state spec_example_0"
+apply(ASR)
 
 end
