@@ -34,27 +34,42 @@
 (* Here I'm being lazy and assuming that these things exist.
  * I hope these don't enable us to prove 0 = 1.
  *)
-Axiom word  : Set.      (* Does anyone know a good uint256 library for Coq? *)
-Axiom word_add : word -> word -> word.
-Axiom word_sub : word -> word -> word.
-Axiom word_one : word.
-Axiom word_zero : word.
-Axiom word_iszero : word -> bool.
-Axiom word_smaller : word -> word -> bool.
-Axiom word_of_nat : nat -> word.
-Axiom nat_of_word : word -> nat.
-Axiom nat_of_word_of_nat :
-  (* This 10000 is a bit arbitrary.  I should use BinNat and use 2^256 *)
+
+
+(* This module can be instantiated into some concrete ways and some more abstract ways. *)
+(* A word can be a tuple of 256 booleans. *)
+(* Alternatively a word can be thought of as some abstract values.
+ * This would be interesting in bytecode analysis tools.
+ *)
+(* Many aspects of the EVM semantics do not care how words are represented. *)
+
+Module Type Word.
+  Parameter word  : Set.      (* Does anyone know a good uint256 library for Coq? *)
+  Parameter word_add : word -> word -> word.
+  Parameter word_sub : word -> word -> word.
+  Parameter word_one : word.
+  Parameter word_zero : word.
+  Parameter word_iszero : word -> bool.
+  (* TODO: state correctness of word_iszero *)
+  Parameter word_smaller : word -> word -> bool.
+  Parameter word_of_nat : nat -> word.
+  Parameter nat_of_word : word -> nat.
+  Parameter nat_of_word_of_nat :
+    (* TODO: This 10000 is a bit arbitrary.  I should use BinNat and use 2^256 *)
   forall n, n < 10000 -> nat_of_word (word_of_nat n) = n.
+
+  Parameter byte : Set.
+  Parameter address : Set.
+  Parameter address_of_word : word -> address.
+
+  Parameter event : Set. (* logged events *)
+End Word.
+
+Module ContractSem (W : Word).
+Export W.
 
 Definition bool_to_word (b : bool) :=
   if b then word_one else word_zero.
-
-Axiom byte : Set.
-Axiom address : Set.
-Axiom address_of_word : word -> address.
-
-Axiom event : Set. (* logged events *)
 
 Open Scope list_scope.
 
@@ -164,57 +179,6 @@ Proof.
   auto.
 Qed.
 
-
-
-
-(**** Now we are able to specify contractsin terms of how they behave over
-      many invocations, returns from calls and even re-entrance! ***)
-
-(* Example 0: a contract that always fails *)
-CoFixpoint always_fail :=
-  ContractAction ContractFail
-                 (Respond (fun _ => always_fail)
-                          (fun _ => always_fail)
-                          always_fail).
-
-(* Example 1: a contract that always returns *)
-CoFixpoint always_return x :=
-  ContractAction (ContractReturn x)
-         (Respond (fun (_ : call_env) => always_return x)
-                  (fun (_ : return_result) => always_return x)
-                  (always_return x)).
-
-(* Example 2: a contract that calls something and then returns, but fails on re-entrance *)
-
-Section FailOnReentrance.
-
-Variable something_to_call : call_arguments.
-
-CoFixpoint call_but_fail_on_reentrance (depth : nat) :=
-  match depth with
-  | O =>
-    Respond
-      (fun _ =>
-         ContractAction (ContractCall something_to_call)
-              (call_but_fail_on_reentrance (S O)))
-      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance O))
-      (ContractAction ContractFail (call_but_fail_on_reentrance O))
-  | S O => (* now the callee responds or reenters *)
-    Respond
-      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance (S O)))
-      (fun retval => ContractAction (ContractReturn retval) (call_but_fail_on_reentrance O))
-      (ContractAction ContractFail (call_but_fail_on_reentrance O))
-  | S (S n) =>
-    Respond
-      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance (S (S n))))
-      (fun retval => ContractAction ContractFail (call_but_fail_on_reentrance (S n)))
-      (ContractAction ContractFail (call_but_fail_on_reentrance (S n)))
-  end.
-
-End FailOnReentrance.
-
-
-
 (********* What the world does on an account ***********)
 
 Inductive world_action :=
@@ -261,35 +225,6 @@ Fixpoint specification_run (w : world) (r : responce_to_world) : history :=
     ActionByContract cact ::
     specification_run world_cont contract_cont
   end.
-
-(******* Example 3.
-  When re-entrance happens to the contract at example 2. ***)
-
-Section Example3.
-
-  Variable e : call_env.
-  Variable a : call_arguments.
-
-  Let example3_world :=
-    WorldCall e :: WorldCall e :: nil.
-
-  Let example2_contract :=
-    call_but_fail_on_reentrance a 0.
-
-  Let example3_history := specification_run example3_world example2_contract.
-
-  Eval compute in example3_history.
-(*
-     = ActionByWorld (WorldCall e)
-       :: ActionByContract (ContractCall a)
-          :: ActionByWorld (WorldCall e)
-             :: ActionByContract ContractFail :: nil
-     : history
-
-*)
-
-End Example3.
-
 
 (***
  *** Some more concrete view on EVM.
@@ -711,6 +646,85 @@ CoInductive account_state_responds_to_world :
     account_state_responds_to_world a (Respond c r f)
 .
 
+End ContractSem.
+
+
+Module AbstractExamples (W : Word).
+  Module C := (ContractSem W).
+  Import C.
+(**** Now we are able to specify contractsin terms of how they behave over
+      many invocations, returns from calls and even re-entrance! ***)
+
+(* Example 0: a contract that always fails *)
+CoFixpoint always_fail :=
+  ContractAction ContractFail
+                 (Respond (fun _ => always_fail)
+                          (fun _ => always_fail)
+                          always_fail).
+
+(* Example 1: a contract that always returns *)
+CoFixpoint always_return x :=
+  ContractAction (ContractReturn x)
+         (Respond (fun (_ : call_env) => always_return x)
+                  (fun (_ : return_result) => always_return x)
+                  (always_return x)).
+
+(* Example 2: a contract that calls something and then returns, but fails on re-entrance *)
+
+Section FailOnReentrance.
+
+Variable something_to_call : call_arguments.
+
+CoFixpoint call_but_fail_on_reentrance (depth : nat) :=
+  match depth with
+  | O =>
+    Respond
+      (fun _ =>
+         ContractAction (ContractCall something_to_call)
+              (call_but_fail_on_reentrance (S O)))
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance O))
+      (ContractAction ContractFail (call_but_fail_on_reentrance O))
+  | S O => (* now the callee responds or reenters *)
+    Respond
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance (S O)))
+      (fun retval => ContractAction (ContractReturn retval) (call_but_fail_on_reentrance O))
+      (ContractAction ContractFail (call_but_fail_on_reentrance O))
+  | S (S n) =>
+    Respond
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance (S (S n))))
+      (fun retval => ContractAction ContractFail (call_but_fail_on_reentrance (S n)))
+      (ContractAction ContractFail (call_but_fail_on_reentrance (S n)))
+  end.
+
+End FailOnReentrance.
+
+(******* Example 3.
+  When re-entrance happens to the contract at example 2. ***)
+
+Section Example3.
+
+  Variable e : call_env.
+  Variable a : call_arguments.
+
+  Let example3_world :=
+    WorldCall e :: WorldCall e :: nil.
+
+  Let example2_contract :=
+    call_but_fail_on_reentrance a 0.
+
+  Let example3_history := specification_run example3_world example2_contract.
+
+  Eval compute in example3_history.
+(*
+     = ActionByWorld (WorldCall e)
+       :: ActionByContract (ContractCall a)
+          :: ActionByWorld (WorldCall e)
+             :: ActionByContract ContractFail :: nil
+     : history
+
+*)
+
+End Example3.
 
 Section Example0Continue.
 
@@ -918,3 +932,5 @@ Section Example1Continue.
   Qed.
 
 End Example1Continue.
+
+End AbstractExamples.
