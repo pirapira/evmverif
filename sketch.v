@@ -62,7 +62,66 @@ Module Type Word.
   Parameter address : Set.
   Parameter address_of_word : word -> address.
 
+  Parameter word_nth_byte : word -> nat -> byte.
+
+  (* list of bytes [a; b; c] as (a * 256 + b) * 256 + c *)
+  Parameter word_of_bytes : list byte -> word.
+
+  Require Import Coq.Lists.List.
+  Import ListNotations.
+  Open Scope list_scope.
+
+  Parameter words_of_nth_bytes :
+    forall w b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 b16 b17 b18 b19 b20 b21 b22 b23 b24 b25 b26 b27 b28 b29 b30 b31,
+    b0 = word_nth_byte w 0 ->
+    b1 = word_nth_byte w 1 ->
+    b2 = word_nth_byte w 2 ->
+    b3 = word_nth_byte w 3 ->
+    b4 = word_nth_byte w 4 ->
+    b5 = word_nth_byte w 5 ->
+    b6 = word_nth_byte w 6 ->
+    b7 = word_nth_byte w 7 ->
+    b8 = word_nth_byte w 8 ->
+    b9 = word_nth_byte w 9 ->
+    b10 = word_nth_byte w 10 ->
+    b11 = word_nth_byte w 11 ->
+    b12 = word_nth_byte w 12 ->
+    b13 = word_nth_byte w 13 ->
+    b14 = word_nth_byte w 14 ->
+    b15 = word_nth_byte w 15 ->
+    b16 = word_nth_byte w 16 ->
+    b17 = word_nth_byte w 17 ->
+    b18 = word_nth_byte w 18 ->
+    b19 = word_nth_byte w 19 ->
+    b20 = word_nth_byte w 20 ->
+    b21 = word_nth_byte w 21 ->
+    b22 = word_nth_byte w 22 ->
+    b23 = word_nth_byte w 23 ->
+    b24 = word_nth_byte w 24 ->
+    b25 = word_nth_byte w 25 ->
+    b26 = word_nth_byte w 26 ->
+    b27 = word_nth_byte w 27 ->
+    b28 = word_nth_byte w 28 ->
+    b29 = word_nth_byte w 29 ->
+    b30 = word_nth_byte w 30 ->
+    b31 = word_nth_byte w 31 ->
+    word_of_bytes
+    [b0; b1; b2; b3; b4; b5; b6; b7; b8; b9; b10; b11; b12; b13; b14; b15; b16;
+     b17; b18; b19; b20; b21; b22; b23; b24; b25; b26; b27; b28; b29; b30; b31] =
+    w.
+
   Parameter event : Set. (* logged events *)
+
+
+  (* These depends on the choice of word.
+   * In the concrete case, these can be MSet or FSet.
+   *)
+  Parameter memory_state : Set. (* For now I don't use the memory *)
+  Parameter empty_memory : memory_state.
+  Parameter cut_memory : word -> word -> memory_state -> list byte.
+  Parameter cut_memory_zero_nil :
+    forall start m, cut_memory start word_zero m = nil.
+
 End Word.
 
 Module ContractSem (W : Word).
@@ -269,14 +328,6 @@ Fixpoint drop_bytes (prog : list instruction) (bytes : nat) {struct bytes} :=
 (**
  ** Execution Environments
  **)
-
-Axiom memory_state : Set. (* For now I don't use the memory *)
-Axiom empty_memory : memory_state.
-Axiom cut_memory : word -> word -> memory_state -> list byte.
-
-Axiom cut_memory_zero_nil :
-  forall start m, cut_memory start word_zero m = nil.
-
 
 Definition storage := word -> word.
 
