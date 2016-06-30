@@ -49,8 +49,8 @@ datatype contract_action =
 codatatype responce_to_world =
   Respond
     "call_env => contract_behavior" (* what to do if called / or re-entered *)
-    "return_result => contract_behavior" (* what to do if the callee returns (if exists) *)
-    "contract_behavior" (* what to do if the callee's execution fails *)
+ (*   "return_result => contract_behavior" (* what to do if the callee returns (if exists) *)
+    "contract_behavior" (* what to do if the callee's execution fails *) *)
 
 and contract_behavior =
   ContractAction contract_action responce_to_world
@@ -63,8 +63,57 @@ where
             ContractAction ContractFail always_fail_response"
 | "always_fail_response =
                  Respond (\<lambda> _. always_fail)
-                         (\<lambda> _. always_fail)
-                         always_fail"
+                      (*   (\<lambda> _. always_fail)
+                         always_fail *)"
+                         
+                         
+(********* What the world does on an account ***********)
+
+Inductive world_action :=
+| WorldCall : call_env -> world_action
+| WorldRet  : return_result -> world_action
+| WorldFail : world_action
+.
+
+Definition world := list world_action.
+
+
+(********
+ When [world] and [respond_to_world] meet,
+ they produce a sequence of events *)
+
+Inductive action :=
+| ActionByWorld : world_action -> action
+| ActionByContract : contract_action -> action.
+
+Definition history := list action.
+
+
+(******** World and the contract interact to produce a history ****)
+
+Fixpoint specification_run (w : world) (r : responce_to_world) : history :=
+  match w, r with
+  | nil, _ => nil
+  | WorldCall call :: world_cont, Respond f _ _ =>
+    match f call with
+    | ContractAction cact contract_cont =>
+      ActionByWorld (WorldCall call) ::
+      ActionByContract cact ::
+      specification_run world_cont contract_cont
+    end
+  | WorldRet ret :: world_cont, Respond _ r _ =>
+    match (r ret) with
+      ContractAction cact contract_cont =>
+      ActionByWorld (WorldRet ret) ::
+      ActionByContract cact ::
+      specification_run world_cont contract_cont
+    end
+  | WorldFail :: world_cont, Respond _ _ (ContractAction cact contract_cont) =>
+    ActionByWorld WorldFail ::
+    ActionByContract cact ::
+    specification_run world_cont contract_cont
+  end.
+
 
 datatype instruction =
   PUSH1 byte
@@ -250,6 +299,9 @@ where
 (* stuck around here *)
 (* try: coinductive mutual definition *)
 
+(* this approach does not work well *)
+(* maybe, define a bytecode_run (something similar to specification_run) *)
+
 coinductive respond_to_call_correctly ::
   "(call_env => contract_behavior) =>
        account_state =>
@@ -260,7 +312,7 @@ coinductive respond_to_call_correctly ::
 where
   ASR : "respond_to_call_correctly c a \<Longrightarrow>
        (* two other conditions missing *)
-       (account_state_responds_to_world a (Respond c r f))"
+       (account_state_responds_to_world a (Respond c(* r f *)))"
 | RCC : "(\<forall> (callenv :: call_env)
           (act :: contract_action) (continuation :: responce_to_world).
           c callenv = ContractAction act continuation -->
@@ -291,13 +343,14 @@ definition spec_example_0 :: responce_to_world where
 "spec_example_0 =
     Respond
       (\<lambda> _. always_fail)
-      (\<lambda> _. always_fail)
-      always_fail"
+     (* (\<lambda> _. always_fail)
+      always_fai *)"
 
                                           
 theorem example0_spec_impl_match:
     "account_state_responds_to_world
       example0_account_state spec_example_0"
-apply(ASR)
+apply(simp add: spec_example_0_def)
+apply(coinduction rule: respond_to_call_correctly_account_state_responds_to_world.intros)
 
 end
