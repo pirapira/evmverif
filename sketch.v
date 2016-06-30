@@ -43,8 +43,11 @@
  *)
 (* Many aspects of the EVM semantics do not care how words are represented. *)
 
+Require Import NArith.
+
 Module Type Word.
   Parameter word  : Set.      (* Does anyone know a good uint256 library for Coq? *)
+  Parameter word_eq : word -> word -> bool.
   Parameter word_add : word -> word -> word.
   Parameter word_sub : word -> word -> word.
   Parameter word_one : word.
@@ -52,11 +55,13 @@ Module Type Word.
   Parameter word_iszero : word -> bool.
   (* TODO: state correctness of word_iszero *)
   Parameter word_smaller : word -> word -> bool.
-  Parameter word_of_nat : nat -> word.
-  Parameter nat_of_word : word -> nat.
-  Parameter nat_of_word_of_nat :
-    (* TODO: This 10000 is a bit arbitrary.  I should use BinNat and use 2^256 *)
-  forall n, n < 10000 -> nat_of_word (word_of_nat n) = n.
+  Parameter word_of_N : N -> word.
+  Parameter N_of_word : word -> N.
+
+  Open Scope N_scope.
+  Parameter N_of_word_of_N :
+    (* TODO: This 10000 is a bit arbitrary. *)
+  forall (n : N), n < 10000 -> N_of_word (word_of_N n) = n.
 
   Parameter byte : Set.
   Parameter address : Set.
@@ -315,15 +320,21 @@ Inductive instruction :=
 
 Definition program := list instruction.
 
-Fixpoint drop_bytes (prog : list instruction) (bytes : nat) {struct bytes} :=
+Print N.
+
+Require Import Recdef.
+
+Function drop_bytes (prog : list instruction) (bytes : N)
+         :=
   match prog, bytes with
-  | _, O => prog
-  | PUSH1 v :: tl, S pre =>
-    drop_bytes tl (pre - 1)
-  | _ :: tl, S pre =>
-    drop_bytes tl pre
-  | nil, S _ => nil
+  | _, N0 => prog
+  | PUSH1 v :: tl, _ =>
+    drop_bytes tl (bytes - 2)
+  | _ :: tl, _ =>
+    drop_bytes tl (bytes - 1)
+  | nil, _ => nil
   end.
+
 
 (**
  ** Execution Environments
@@ -427,7 +438,7 @@ Definition venv_stack_top (v : variable_env) : option word :=
   | _ => None
   end.
 
-Definition venv_change_sfx (pos : nat) (v : variable_env)
+Definition venv_change_sfx (pos : N) (v : variable_env)
   (c : constant_env) : variable_env :=
   {|
     venv_stack := v.(venv_stack) ;
@@ -468,7 +479,7 @@ Definition jump (v : variable_env) (c : constant_env) : instruction_result :=
   match venv_stack_top v with
   | None => instruction_failure_result
   | Some pos =>
-    let v_new := venv_change_sfx (nat_of_word pos) (venv_pop_stack 1 v) c in
+    let v_new := venv_change_sfx (N_of_word pos) (venv_pop_stack 1 v) c in
     match venv_first_instruction v_new with
     | Some JUMPDEST =>
         InstructionContinue v_new
@@ -637,10 +648,11 @@ Definition update_account_state (prev : account_state) (v_opt : option variable_
   end.
 
 (* [program_result_approximate a b] holds when
-   a is identical to be or a still needs more steps *)
+   a is identical to b or a still needs more steps *)
 Definition program_result_approximate (a : program_result) (b : program_result)
 :=
-  a = ProgramStepRunOut \/ a = b.
+  a = ProgramStepRunOut \/ a = b
+  (* TODO: this [a = b] has to be weakened up to 2^256 in many places *).
 
 Definition respond_to_call_correctly c a account_state_responds_to_world :=
       (forall (callenv : call_env)
@@ -788,7 +800,7 @@ Section Example0Continue.
   Variable example0_address : address.
 
   Definition example0_program :=
-    PUSH1 (word_of_nat 0) ::
+    PUSH1 (word_of_N 0) ::
     JUMP :: nil.
 
   Definition example0_account_state :=
@@ -845,12 +857,11 @@ Section Example0Continue.
         unfold venv_update_stack; simpl.
         unfold venv_change_sfx; simpl.
         unfold venv_first_instruction; simpl.
-        (* avoid omega somehow ... *)
-        Require Import Omega.
-        rewrite nat_of_word_of_nat; [ | omega].
-        simpl.
-        right.
-        auto.
+        rewrite N_of_word_of_N.
+        { simpl.
+          right.
+          auto. }
+        reflexivity.
       }
       {
         assumption.
