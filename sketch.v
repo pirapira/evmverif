@@ -500,7 +500,6 @@ Definition sload (v : variable_env) (idx : word) : word :=
   v.(venv_storage) idx.
 
 Axiom sstore : variable_env -> constant_env -> instruction_result.
-Axiom jumpi : variable_env -> constant_env -> instruction_result.
 
 Definition jump (v : variable_env) (c : constant_env) : instruction_result :=
   match venv_stack_top v with
@@ -513,6 +512,17 @@ Definition jump (v : variable_env) (c : constant_env) : instruction_result :=
     | _ => instruction_failure_result
     end
   end.
+
+Definition jumpi (v : variable_env) (c : constant_env) : instruction_result :=
+  match v.(venv_stack) with
+  | pos :: cond :: rest =>
+    if word_iszero cond then
+      InstructionContinue (venv_advance_pc (venv_pop_stack 2 v))
+    else
+      jump (venv_pop_stack 1 v) c (* this has to change when gas is considered *)
+  | _ => instruction_failure_result
+  end.
+
 
 Axiom datasize : variable_env -> word.
 
@@ -565,7 +575,6 @@ Definition ret (v : variable_env) (c : constant_env) : instruction_result :=
   InstructionToWorld (ContractReturn (venv_returned_bytes v)) None.
 
 Axiom stop : variable_env -> constant_env -> instruction_result.
-Axiom dup1 : variable_env -> constant_env -> instruction_result.
 Axiom pop : variable_env -> constant_env -> instruction_result.
 
 Require Import Coq.Program.Basics.
@@ -1301,9 +1310,13 @@ CoFixpoint call_but_fail_on_reentrance (depth : nat) :=
         case s as [| s]; [ simpl; left; auto | ].
         case s as [| s]; [ simpl; left; auto | ].
         case s as [| s]; [ simpl; left; auto | ].
+        case s as [| s]; [ simpl; left; auto | ].
+        (* this automatically detects that the first JUMPI is not fired *)
+        case s as [| s]; [ simpl; left; auto | ].
+        case s as [| s]; [ simpl; left; auto | ].
 
-        (* here the definition of jumpi is needed *)
-        admit.
+        (* here the definition of add is needed *)
+        admit. admit.
       }
       {
         admit.
