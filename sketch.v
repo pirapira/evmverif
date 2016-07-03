@@ -493,8 +493,14 @@ Definition stack_1_2_op (v: variable_env) (c : constant_env)
       end
   end.
 
-Axiom stack_2_1_op: variable_env -> constant_env ->
-                    (word -> word -> word) -> instruction_result.
+Definition stack_2_1_op (v : variable_env) (c : constant_env)
+                    (f : word -> word -> word) : instruction_result :=
+  match v.(venv_stack) with
+    | operand0 :: operand1 :: rest =>
+      InstructionContinue (venv_advance_pc
+                             (venv_update_stack (f operand0 operand1 :: rest) v))
+    | _ => instruction_failure_result
+  end.
 
 Definition sload (v : variable_env) (idx : word) : word :=
   v.(venv_storage) idx.
@@ -1314,8 +1320,10 @@ CoFixpoint call_but_fail_on_reentrance (depth : nat) :=
         (* this automatically detects that the first JUMPI is not fired *)
         case s as [| s]; [ simpl; left; auto | ].
         case s as [| s]; [ simpl; left; auto | ].
+        case s as [| s]; [ simpl; left; auto | ].
+        case s as [| s]; [ simpl; left; auto | ].
 
-        (* here the definition of add is needed *)
+        (* here the definition of sstore is needed *)
         admit. admit.
       }
       {
