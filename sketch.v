@@ -480,6 +480,19 @@ Definition stack_1_1_op (v: variable_env) (c : constant_env)
         (venv_advance_pc (venv_update_stack (f h :: t) v))
   end.
 
+Definition stack_1_2_op (v: variable_env) (c : constant_env)
+           (f : word -> (word (* new head *) * word (* new second*) ))
+  : instruction_result :=
+  match v.(venv_stack) with
+    | nil => instruction_failure_result
+    | h :: t =>
+      match f h with
+        (new0, new1) =>
+        InstructionContinue
+          (venv_advance_pc (venv_update_stack (new0 :: new1 :: t) v))
+      end
+  end.
+
 Axiom stack_2_1_op: variable_env -> constant_env ->
                     (word -> word -> word) -> instruction_result.
 
@@ -487,7 +500,7 @@ Definition sload (v : variable_env) (idx : word) : word :=
   v.(venv_storage) idx.
 
 Axiom sstore : variable_env -> constant_env -> instruction_result.
-Axiom ijump : variable_env -> constant_env -> instruction_result.
+Axiom jumpi : variable_env -> constant_env -> instruction_result.
 
 Definition jump (v : variable_env) (c : constant_env) : instruction_result :=
   match venv_stack_top v with
@@ -563,7 +576,7 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | PUSH1 w => stack_0_1_op v c w
   | SLOAD => stack_1_1_op v c (sload v)
   | SSTORE => sstore v c
-  | JUMPI => ijump v c
+  | JUMPI => jumpi v c
   | JUMP => jump v c
   | JUMPDEST => stack_0_0_op v c
   | CALLDATASIZE => stack_0_1_op v c (datasize v)
@@ -573,7 +586,7 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | CALL => call v c
   | RETURN => ret v c
   | STOP => stop v c
-  | DUP1 => dup1 v c
+  | DUP1 => stack_1_2_op v c (fun a => (a, a))
   | POP => pop v c
   end.
 
@@ -1285,8 +1298,11 @@ CoFixpoint call_but_fail_on_reentrance (depth : nat) :=
         case s as [| s]; [ simpl; left; auto | ].
         case s as [| s]; [ simpl; left; auto | ].
         case s as [| s]; [ simpl; left; auto | ].
+        case s as [| s]; [ simpl; left; auto | ].
+        case s as [| s]; [ simpl; left; auto | ].
+        case s as [| s]; [ simpl; left; auto | ].
 
-        (* here the definition of dup1 is needed *)
+        (* here the definition of jumpi is needed *)
         admit.
       }
       {
