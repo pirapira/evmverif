@@ -304,7 +304,7 @@ Inductive instruction :=
 | SLOAD
 | SSTORE
 | JUMP
-| IJUMP
+| JUMPI
 | JUMPDEST
 | CALLDATASIZE
 | ADD
@@ -312,6 +312,9 @@ Inductive instruction :=
 | ISZERO
 | CALL
 | RETURN
+| STOP
+| DUP1
+| POP
 .
 
 (**
@@ -340,7 +343,7 @@ Function drop_bytes (prog : list instruction) (bytes : N)
  ** Execution Environments
  **)
 
-Definition storage := word -> word.
+Definition storage := word -> word. (* TODO maybe this should be FSet *)
 
 Definition empty_storage : storage :=
   fun _ => word_zero.
@@ -468,12 +471,21 @@ Definition stack_0_1_op (v : variable_env) (c : constant_env) (w : word) : instr
 
 
 (* These are just assumed for my laziness. *)
-Axiom stack_1_1_op: variable_env -> constant_env ->
-                    (word -> word) -> instruction_result.
+Definition stack_1_1_op (v: variable_env) (c : constant_env)
+                    (f : word -> word) : instruction_result :=
+  match v.(venv_stack) with
+    | nil => instruction_failure_result
+    | h :: t =>
+      InstructionContinue
+        (venv_advance_pc (venv_update_stack (f h :: t) v))
+  end.
+
 Axiom stack_2_1_op: variable_env -> constant_env ->
                     (word -> word -> word) -> instruction_result.
 
-Axiom sload : variable_env -> word -> word.
+Definition sload (v : variable_env) (idx : word) : word :=
+  v.(venv_storage) idx.
+
 Axiom sstore : variable_env -> constant_env -> instruction_result.
 Axiom ijump : variable_env -> constant_env -> instruction_result.
 
@@ -539,6 +551,10 @@ Arguments venv_returned_bytes v /.
 Definition ret (v : variable_env) (c : constant_env) : instruction_result :=
   InstructionToWorld (ContractReturn (venv_returned_bytes v)) None.
 
+Axiom stop : variable_env -> constant_env -> instruction_result.
+Axiom dup1 : variable_env -> constant_env -> instruction_result.
+Axiom pop : variable_env -> constant_env -> instruction_result.
+
 Require Import Coq.Program.Basics.
 
 Definition instruction_sem (v : variable_env) (c : constant_env) (i : instruction)
@@ -547,7 +563,7 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | PUSH1 w => stack_0_1_op v c w
   | SLOAD => stack_1_1_op v c (sload v)
   | SSTORE => sstore v c
-  | IJUMP => ijump v c
+  | JUMPI => ijump v c
   | JUMP => jump v c
   | JUMPDEST => stack_0_0_op v c
   | CALLDATASIZE => stack_0_1_op v c (datasize v)
@@ -556,6 +572,9 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | ISZERO => stack_1_1_op v c (compose bool_to_word word_iszero)
   | CALL => call v c
   | RETURN => ret v c
+  | STOP => stop v c
+  | DUP1 => dup1 v c
+  | POP => pop v c
   end.
 
 Inductive program_result :=
@@ -999,6 +1018,7 @@ End Example1Continue.
 
 End AbstractExamples.
 
+
 Require Import Cyclic.Abstract.CyclicAxioms.
 Require Import Coq.Lists.List.
 
@@ -1165,3 +1185,120 @@ Module ConcreteWord <: Word.
     forall start m, cut_memory start word_zero m = nil.
 
 End ConcreteWord.
+
+
+Module ExamplesOnConcreteWord.
+
+  Module ConcreteSem := (ContractSem ConcreteWord).
+  Include ConcreteSem.
+
+  Definition example2_program : program :=
+    PUSH1 (word_of_N 0) ::
+    SLOAD ::
+    DUP1 ::
+    DUP1 ::
+    PUSH1 (word_of_N 2) ::
+    JUMPI ::
+    PUSH1 (word_of_N 1) ::
+    ADD ::
+    PUSH1 (word_of_N 0) ::
+    SSTORE ::
+    PUSH1 (word_of_N 0) ::
+    (* TODO: change some of these arguments to value, address *)
+    PUSH1 (word_of_N 0) ::
+    PUSH1 (word_of_N 0) ::
+    PUSH1 (word_of_N 0) ::
+    PUSH1 (word_of_N 0) ::
+    PUSH1 (word_of_N 0) ::
+    CALL ::
+    POP ::
+    PUSH1 (word_of_N 1) ::
+    SUB ::
+    PUSH1 (word_of_N 0) ::
+    SSTORE ::
+    STOP ::
+    nil.
+
+  Variable example2_address : address.
+
+  Definition example2_account_state :=
+    {| account_address := example2_address ;
+       account_storage := empty_storage ;
+       account_code := example2_program ;
+       account_ongoing_calls := nil |}.
+
+
+Variable something_to_call : call_arguments.
+
+(* TODO: remove duplicate somehow *)
+CoFixpoint call_but_fail_on_reentrance (depth : nat) :=
+  match depth with
+  | O =>
+    Respond
+      (fun _ =>
+         ContractAction (ContractCall something_to_call)
+              (call_but_fail_on_reentrance (S O)))
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance O))
+      (ContractAction ContractFail (call_but_fail_on_reentrance O))
+  | S O => (* now the callee responds or reenters *)
+    Respond
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance (S O)))
+      (fun retval => ContractAction (ContractReturn retval) (call_but_fail_on_reentrance O))
+      (ContractAction ContractFail (call_but_fail_on_reentrance O))
+  | S (S n) =>
+    Respond
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance (S (S n))))
+      (fun retval => ContractAction ContractFail (call_but_fail_on_reentrance (S n)))
+      (ContractAction ContractFail (call_but_fail_on_reentrance (S n)))
+  end.
+
+  Lemma call_but_fail_on_reentrace_0_eq :
+    call_but_fail_on_reentrance 0 =
+    Respond
+      (fun _ =>
+         ContractAction (ContractCall something_to_call)
+              (call_but_fail_on_reentrance (S O)))
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance O))
+      (ContractAction ContractFail (call_but_fail_on_reentrance O)).
+  Admitted.
+
+  Definition example2_spec : responce_to_world :=
+    call_but_fail_on_reentrance 0.
+
+  Theorem example2_spec_impl_match :
+    account_state_responds_to_world
+      example2_account_state example2_spec.
+  Proof.
+    cofix.
+    unfold example2_spec.
+    rewrite call_but_fail_on_reentrace_0_eq.
+    apply AccountStep.
+    {
+      unfold respond_to_call_correctly.
+      intros ce a con next.
+      eexists.
+      eexists.
+      eexists.
+      split.
+      {
+        intro s.
+        case s as [| s]; [ simpl; left; auto | ].
+        case s as [| s]; [ simpl; left; auto | ].
+        case s as [| s]; [ simpl; left; auto | ].
+
+        (* here the definition of dup1 is needed *)
+        admit.
+      }
+      {
+        admit.
+      }
+    }
+    {
+      admit.
+    }
+    {
+      admit.
+    }
+  Admitted.
+
+End ExamplesOnConcreteWord.
