@@ -1526,23 +1526,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         split.
         {
           intro s.
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
-          case s as [| s]; [ simpl; left; auto | ].
+          repeat (case s as [| s]; [ solve [left; auto] | ]).
 
           simpl.
           assert (H : word_smaller (callenv_balance ce example2_address) 0%Z = false) by admit.
