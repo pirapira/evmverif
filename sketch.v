@@ -1553,9 +1553,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     {
       intro nst.
       destruct nst as [nst0 nst1].
-        case nst1 as [nst1 nst2].
-        case nst2 as [nst2 nst3].
-        case nst3 as [nst3 nst4].
+      case nst1 as [nst1 nst2].
+      case nst2 as [nst2 nst3].
+      case nst3 as [nst3 nst4].
       subst.
       clear n_state.
       subst.
@@ -1576,8 +1576,31 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           repeat (case s as [| s]; [ solve [left; auto] | ]).
           assert (stl : forall idx, storage_load (account_storage st) idx = storage_load empty_storage idx).
           {
-            (* use nst2 *)
-            admit.
+            intro idx.
+            unfold storage_load.
+            apply ST.equal_2 in nst2.
+            unfold ST.Equivb in nst2.
+            unfold ST.Raw.Equivb in nst2.
+            simpl.
+            case_eq (ST.find (elt:=word) idx (account_storage st)); auto.
+            intros w H.
+            apply ST.find_2 in H.
+            Search _ ST.MapsTo.
+            apply False_ind.
+            Search _ ST.In.
+            assert (ST.Raw.PX.In idx (ST.this (account_storage st))) as K.
+            {
+              unfold ST.Raw.PX.In.
+              exists w.
+              assumption.
+            }
+            case nst2 as [EE _].
+            rewrite EE in K.
+            unfold ST.Raw.PX.In in K.
+            case K.
+            intros content K'.
+            apply (@ST.Raw.empty_1 word idx content).
+            assumption.
           }
           simpl.
           rewrite !stl.
@@ -1620,7 +1643,33 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           }
           split; auto.
           eexists; eauto.
-          admit.
+          split.
+          {
+            rewrite nst4.
+            eauto.
+          }
+          {
+            split; auto.
+            simpl.
+            Search _ ST.equal.
+            apply ST.equal_1.
+            split.
+            {
+              intro k.
+              Search ST.Raw.PX.In.
+              unfold empty_storage.
+              (* something with nst2 *)
+              admit.
+            }
+            {
+              intros k e e' H I.
+              apply False_ind.
+              generalize I.
+              unfold empty_storage.
+              generalize (ST.empty_1 I).
+              auto.
+            }
+          }
 
        (* this place should be come harder and harder as I specify the
            * state at depth 1
