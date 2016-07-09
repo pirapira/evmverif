@@ -1657,9 +1657,68 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             {
               intro k.
               Search ST.Raw.PX.In.
-              unfold empty_storage.
-              (* something with nst2 *)
-              admit.
+              unfold storage_store.
+              simpl.
+              split.
+              { intro H.
+                apply False_ind.
+                case_eq (word_eq k 0%Z).
+                { intro k0.
+                  apply ST.Raw.remove_1 in H; auto.
+                  { apply ST.Raw.add_sorted.
+                    apply ST.sorted. }
+                  apply ST.E.eq_sym.
+                  assumption.
+                }
+                {
+                  intro neq.
+                  unfold ST.Raw.PX.In in H.
+                  case H as [e H].
+                  Search _ ST.Raw.PX.MapsTo.
+                  apply ST.Raw.remove_3 in H.
+                  {
+                    Search _ ST.Raw.PX.MapsTo.
+                    apply ST.Raw.add_3 in H.
+                    {
+                      apply ST.equal_2 in nst2.
+                      case nst2 as [I _].
+                      generalize (I k).
+                      unfold ST.Raw.PX.In.
+                      intro I'.
+                      case I' as [I0 _].
+                      simpl in I0.
+                      Search _ ST.Raw.empty.
+                      case I0.
+                      {
+                        exists e.
+                        apply H.
+                      }
+                      {
+                        intros x J.
+                        eapply ST.Raw.empty_1.
+                        apply J.
+                      }
+                    }
+                    {
+                      intro K.
+                      apply ST.E.eq_sym in K.
+                      congruence.
+                    }
+                  }
+                  {
+                    Search Sorted.
+                    apply ST.Raw.add_sorted.
+                    apply ST.sorted.
+                  }
+                }
+              }
+              {
+                intro H.
+                apply False_ind.
+                case H.
+                intros x Hx.
+                apply (ST.Raw.empty_1 Hx).
+              }
             }
             {
               intros k e e' H I.
