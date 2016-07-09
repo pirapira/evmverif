@@ -1488,6 +1488,14 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       (ContractAction ContractFail (call_but_fail_on_reentrance word_zero)).
   Admitted.
 
+  Lemma call_but_fail_on_reentrace_1_eq :
+    call_but_fail_on_reentrance 1%Z =
+    Respond
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance word_one))
+      (fun retval => ContractAction (ContractReturn retval) (call_but_fail_on_reentrance word_zero))
+      (ContractAction ContractFail (call_but_fail_on_reentrance word_zero)).
+  Admitted.
+
   Definition example2_spec (depth: word) : responce_to_world :=
     call_but_fail_on_reentrance depth.
 
@@ -1554,11 +1562,13 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           unfold storage_store.
           unfold empty_storage.
           simpl.
-
-
-          (* TODO: example2_account_state 1, should contain account_ongoing_calls *)
-
-          admit.
+          apply example2_spec_impl_match.
+          unfold example2_depth_n_state.
+          right.
+          auto.
+          (* this place should be come harder and harder as I specify the
+           * state at depth 1
+           *)
         }
       }
       {
@@ -1575,7 +1585,20 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       }
     }
     {
-      admit.
+      intros ?.
+      subst.
+      unfold example2_spec.
+      rewrite call_but_fail_on_reentrace_1_eq.
+      apply AccountStep.
+      { (* call *)
+        admit.
+      }
+      { (* return *)
+        admit.
+      }
+      { (* fail *)
+        admit.
+      }
     }
   Admitted.
 
