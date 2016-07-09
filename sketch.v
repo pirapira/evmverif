@@ -133,7 +133,10 @@ Module Type Word.
 
   Parameter storage : Type.
   Parameter storage_load : storage -> word -> word.
+  Arguments storage_load idx s /.
+
   Parameter storage_store : word (* idx *) -> word (* value *) -> storage -> storage.
+
   Parameter empty_storage : storage.
   Parameter empty_storage_empty : forall idx : word,
       is_true (word_iszero (storage_load empty_storage idx)).
@@ -359,7 +362,7 @@ Record variable_env :=
   ; venv_memory : memory_state
   ; venv_storage : storage
   ; venv_prg_sfx : list instruction
-  ; venv_balance : address -> word
+  ; venv_balance : address -> word (* does this blong here?*)
   ; venv_caller : address
   ; venv_value_sent : word
   (* TODO: add the sequence of executed instructions.
@@ -525,6 +528,8 @@ Definition stack_2_1_op (v : variable_env) (c : constant_env)
 
 Definition sload (v : variable_env) (idx : word) : word :=
   storage_load v.(venv_storage) idx.
+
+Arguments sload v idx /.
 
 Definition sstore (v : variable_env) (c : constant_env) : instruction_result :=
   match v.(venv_stack) with
@@ -1429,13 +1434,18 @@ Module ExamplesOnConcreteWord.
 
   Variable example2_address : address.
 
-  Definition example2_account_state (n : word) :=
+  Definition example2_account_state_zero :=
     {| account_address := example2_address ;
-       account_storage := storage_store (0%Z) n empty_storage ;
-       (* TODO: this does not work.  maybe use finite map as sorted list *)
-
+       account_storage := empty_storage ;
        account_code := example2_program ;
        account_ongoing_calls := nil |}.
+
+  Definition example2_depth_n_state  (n : word) (st : account_state) :=
+    (n = 0%Z /\ st =     {| account_address := example2_address ;
+       account_storage := empty_storage ;
+       account_code := example2_program ;
+       account_ongoing_calls := nil |}) \/
+     n = 1%Z.
 
 
 Definition something_to_call :=
@@ -1482,15 +1492,19 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     call_but_fail_on_reentrance depth.
 
   Theorem example2_spec_impl_match :
-    forall depth : word,
-      (depth = 0%Z \/ depth = 1%Z) ->
-      account_state_responds_to_world
-        (example2_account_state depth) (example2_spec depth).
+    forall st n,
+          example2_depth_n_state n st ->
+          account_state_responds_to_world
+            st (example2_spec n%Z).
   Proof.
     cofix.
-    intros d H.
-    destruct H.
+    intros st n n_state.
+    case n_state.
     {
+      intro nst.
+      destruct nst as [nst0 nst1].
+      subst.
+      clear n_state.
       subst.
       unfold example2_spec.
       rewrite call_but_fail_on_reentrace_0_eq.
@@ -1535,6 +1549,13 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           simpl.
           rewrite <- contract_action_expander_eq in next at 1.
           inversion next; subst.
+          simpl.
+          unfold storage_load.
+          unfold storage_store.
+          unfold empty_storage.
+          simpl.
+
+
           (* TODO: example2_account_state 1, should contain account_ongoing_calls *)
 
           admit.
@@ -1543,7 +1564,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       {
         unfold respond_to_return_correctly.
         intros ? ? ? ? ?.
-        unfold example2_account_state.
         unfold build_venv_returned.
         rewrite account_no_call_never_return; auto.
         congruence.
