@@ -422,6 +422,8 @@ Definition venv_update_stack (new_stack : list word) (v : variable_env) :=
     venv_value_sent := v.(venv_value_sent)
   |}.
 
+Arguments venv_update_stack new_stack v /.
+
 Definition venv_advance_pc (v : variable_env) :=
   {|
     venv_stack := v.(venv_stack) ;
@@ -463,6 +465,8 @@ Definition venv_change_sfx (pos : N) (v : variable_env)
     venv_caller := v.(venv_caller);
     venv_value_sent := v.(venv_value_sent);
   |}.
+
+Arguments venv_change_sfx pos v c /.
 
 Definition function_update (addr : word) (val : word) (f : word -> word) : (word -> word) :=
   fun x => (if word_eq x addr then val else f x).
@@ -1434,18 +1438,16 @@ Module ExamplesOnConcreteWord.
 
   Variable example2_address : address.
 
-  Definition example2_account_state_zero :=
-    {| account_address := example2_address ;
-       account_storage := empty_storage ;
-       account_code := example2_program ;
-       account_ongoing_calls := nil |}.
-
   Definition example2_depth_n_state  (n : word) (st : account_state) :=
     (n = 0%Z /\ st =     {| account_address := example2_address ;
        account_storage := empty_storage ;
        account_code := example2_program ;
        account_ongoing_calls := nil |}) \/
-     n = 1%Z.
+     (n = 1%Z /\
+      st.(account_code) = example2_program /\
+      storage_load (account_storage st) 0%Z = 1%Z
+     )
+  .
 
 
 Definition something_to_call :=
@@ -1569,13 +1571,45 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       }
     }
     {
-      intros ?.
+      intros H.
+      destruct H as [n1 st_code].
+      destruct st_code as [st_code st_load].
       subst.
       unfold example2_spec.
       rewrite call_but_fail_on_reentrace_1_eq.
       apply AccountStep.
       { (* call *)
-        admit.
+        intros callenv act continuation H.
+        inversion H; subst.
+        clear H.
+        eexists.
+        eexists.
+        eexists.
+        unfold build_venv_called.
+        rewrite st_code.
+        split.
+        {
+          intro s.
+          repeat (case s as [| s]; [ solve [left; auto] | ]).
+          simpl.
+          unfold jumpi.
+          simpl.
+          rewrite st_load.
+          simpl.
+          unfold jump.
+          simpl.
+          unfold venv_first_instruction.
+          rewrite st_code.
+          simpl.
+          right.
+          eauto.
+        }
+        {
+          apply example2_spec_impl_match.
+          unfold example2_depth_n_state.
+          right.
+          split; auto.
+        }
       }
       { (* return *)
         admit.
