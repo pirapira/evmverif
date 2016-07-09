@@ -1415,6 +1415,9 @@ Module ConcreteWord <: Word.
     | Some x => x
     end.
   Definition storage_store (k : WordOrdered.t) (v : word) (orig : storage) : storage :=
+    (* TODO if the value is zero, remove the entry from the map!
+       This makes example2 easier.
+     *)
     ST.add k v orig.
 
   Definition empty_storage : storage := ST.empty word.
@@ -1474,6 +1477,8 @@ Module ExamplesOnConcreteWord.
       st.(account_code) = example2_program /\
       storage_load (account_storage st) 0%Z = 1%Z /\
       st.(account_address) = example2_address /\
+      storage_store 0%Z 0%Z st.(account_storage) =
+      storage_store 0%Z 0%Z empty_storage /\
       exists ve, (st.(account_ongoing_calls) = ve :: nil /\
              ve.(venv_prg_sfx) =
              ISZERO ::
@@ -1589,8 +1594,11 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           simpl.
           split; auto.
           split; auto.
+          split; auto.
           eexists; eauto.
-        (* this place should be come harder and harder as I specify the
+          (* some extentional equality... *) admit.
+
+       (* this place should be come harder and harder as I specify the
            * state at depth 1
            *)
         }
@@ -1659,7 +1667,10 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         intros prev prevH.
         case prevH as [prevH prevH'].
         case prevH' as [prevH' prevH''].
-        rewrite prevH'.
+        case prevH' as [prevH''' prevH''''].
+        simpl in prevH''.
+        case prevH'' as [prevH5 prevH6].
+        rewrite prevH5.
         intro H.
         inversion H; subst.
         clear H.
@@ -1667,7 +1678,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         eexists.
         eexists.
         eexists.
-        rewrite prevH''.
         split.
         {
           intro s.
@@ -1689,25 +1699,26 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           intro prev_v.
           intro H.
           case H as [H3 H4].
+          case H4 as [H4 H5].
           unfold account_state_pop_ongoing_call.
           simpl.
           f_equal.
           {
-            (* need to strengthen the condition *)
             rewrite prev.
-            auto.
+            solve [auto].
           }
           {
             (* need to strengthen the condition *)
+            (* maybe change storage_store *)
+
             admit.
           }
           {
-            (* need to strengthen the condition *)
-            admit.
+            assumption.
           }
           {
-            case H4 as [H4 H5].
-            rewrite H4.
+            case H5 as [H5 H6].
+            rewrite H5.
             auto.
           }
         }
