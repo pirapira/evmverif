@@ -1454,7 +1454,9 @@ Module ExamplesOnConcreteWord.
     PUSH1 (word_of_N 0) ::
     PUSH1 (word_of_N 0) ::
     CALL ::
-    POP ::
+    ISZERO ::
+    PUSH1 (word_of_N 0) ::
+    JUMPI ::
     PUSH1 (word_of_N 0) ::
     PUSH1 (word_of_N 0) ::
     SSTORE ::
@@ -1471,9 +1473,11 @@ Module ExamplesOnConcreteWord.
      (n = 1%Z /\
       st.(account_code) = example2_program /\
       storage_load (account_storage st) 0%Z = 1%Z /\
+      st.(account_address) = example2_address /\
       exists ve, (st.(account_ongoing_calls) = ve :: nil /\
              ve.(venv_prg_sfx) =
-                  POP
+             ISZERO ::
+               PUSH1 0%Z :: JUMPI
                      :: PUSH1 0%Z
                         :: PUSH1 0%Z :: SSTORE :: STOP :: nil
                   )
@@ -1560,7 +1564,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         {
           intro s.
           repeat (case s as [| s]; [ solve [left; auto] | ]).
-          
           simpl.
           assert (H : word_smaller (callenv_balance ce example2_address) 0%Z = false) by admit.
           rewrite H.
@@ -1655,7 +1658,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         elim st_ongoing.
         intros prev prevH.
         case prevH as [prevH prevH'].
-        rewrite prevH.
+        case prevH' as [prevH' prevH''].
+        rewrite prevH'.
         intro H.
         inversion H; subst.
         clear H.
@@ -1663,7 +1667,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         eexists.
         eexists.
         eexists.
-        rewrite prevH'.
+        rewrite prevH''.
         split.
         {
           intro s.
@@ -1690,7 +1694,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           f_equal.
           {
             (* need to strengthen the condition *)
-            admit.
+            rewrite prev.
+            auto.
           }
           {
             (* need to strengthen the condition *)
@@ -1701,7 +1706,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             admit.
           }
           {
-            rewrite H3.
+            case H4 as [H4 H5].
+            rewrite H4.
             auto.
           }
         }
