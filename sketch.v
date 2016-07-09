@@ -44,12 +44,12 @@
 (* Many aspects of the EVM semantics do not care how words are represented. *)
 
 Require Import NArith.
-Require FSetList.
+Require FMapList.
 Require Import OrderedType.
 
 Module Type Word.
 
-  Parameter word : Set.
+  Parameter word : Type.
 
   Parameter word_eq : word -> word -> bool.
   Parameter word_add : word -> word -> word.
@@ -67,8 +67,8 @@ Module Type Word.
     (* TODO: This 10000 is a bit arbitrary. *)
   forall (n : N), n < 10000 -> N_of_word (word_of_N n) = n.
 
-  Parameter byte : Set.
-  Parameter address : Set.
+  Parameter byte : Type.
+  Parameter address : Type.
   Parameter address_of_word : word -> address.
 
   Parameter word_nth_byte : word -> nat -> byte.
@@ -119,19 +119,19 @@ Module Type Word.
      b17; b18; b19; b20; b21; b22; b23; b24; b25; b26; b27; b28; b29; b30; b31] =
     w.
 
-  Parameter event : Set. (* logged events *)
+  Parameter event : Type. (* logged events *)
 
 
   (* These depends on the choice of word.
    * In the concrete case, these can be MSet or FSet.
    *)
-  Parameter memory_state : Set. (* For now I don't use the memory *)
+  Parameter memory_state : Type. (* For now I don't use the memory *)
   Parameter empty_memory : memory_state.
   Parameter cut_memory : word -> word -> memory_state -> list byte.
   Parameter cut_memory_zero_nil :
     forall start m, cut_memory start word_zero m = nil.
 
-  Parameter storage : Set.
+  Parameter storage : Type.
   Parameter storage_load : storage -> word -> word.
   Parameter storage_store : word (* idx *) -> word (* value *) -> storage -> storage.
   Parameter empty_storage : storage.
@@ -1180,79 +1180,12 @@ Module ConcreteWord <: Word.
   Admitted.
 
 
-  Definition raw_byte := B.t.
-  Inductive byte' :=
-  | ByteRaw : raw_byte -> byte'
-  | ByteOfWord : word -> nat -> byte'
-  .
-  Definition byte := byte'.
-
-  Definition address := A.t.
-
-  Definition address_of_word (w : word) : address := w.
-
-  Definition word_nth_byte (w : word) (n : nat) : byte :=
-    ByteOfWord w n.
-
-  Axiom word_of_bytes : list byte -> word.
-
-  Open Scope list_scope.
-
-  Import ListNotations.
-  Lemma words_of_nth_bytes :
-    forall w b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 b16 b17 b18 b19 b20 b21 b22 b23 b24 b25 b26 b27 b28 b29 b30 b31,
-    b0 = word_nth_byte w 0 ->
-    b1 = word_nth_byte w 1 ->
-    b2 = word_nth_byte w 2 ->
-    b3 = word_nth_byte w 3 ->
-    b4 = word_nth_byte w 4 ->
-    b5 = word_nth_byte w 5 ->
-    b6 = word_nth_byte w 6 ->
-    b7 = word_nth_byte w 7 ->
-    b8 = word_nth_byte w 8 ->
-    b9 = word_nth_byte w 9 ->
-    b10 = word_nth_byte w 10 ->
-    b11 = word_nth_byte w 11 ->
-    b12 = word_nth_byte w 12 ->
-    b13 = word_nth_byte w 13 ->
-    b14 = word_nth_byte w 14 ->
-    b15 = word_nth_byte w 15 ->
-    b16 = word_nth_byte w 16 ->
-    b17 = word_nth_byte w 17 ->
-    b18 = word_nth_byte w 18 ->
-    b19 = word_nth_byte w 19 ->
-    b20 = word_nth_byte w 20 ->
-    b21 = word_nth_byte w 21 ->
-    b22 = word_nth_byte w 22 ->
-    b23 = word_nth_byte w 23 ->
-    b24 = word_nth_byte w 24 ->
-    b25 = word_nth_byte w 25 ->
-    b26 = word_nth_byte w 26 ->
-    b27 = word_nth_byte w 27 ->
-    b28 = word_nth_byte w 28 ->
-    b29 = word_nth_byte w 29 ->
-    b30 = word_nth_byte w 30 ->
-    b31 = word_nth_byte w 31 ->
-    word_of_bytes
-    [b0; b1; b2; b3; b4; b5; b6; b7; b8; b9; b10; b11; b12; b13; b14; b15; b16;
-     b17; b18; b19; b20; b21; b22; b23; b24; b25; b26; b27; b28; b29; b30; b31] =
-    w.
-  Admitted.
-
-  Axiom event : Set.
-
-  Axiom memory_state : Set.
-  Axiom empty_memory : memory_state.
-  Axiom cut_memory : word -> word -> memory_state -> list byte.
-  Axiom cut_memory_zero_nil :
-    forall start m, cut_memory start word_zero m = nil.
-
+  Module WordOrdered <: OrderedType.
   (* Before using FSetList as storage,
      I need word as OrderedType *)
 
-  Module WordOrdered : OrderedType.
 
-      Definition t := word.
+      Definition t := W.t.
       Definition eq a b := is_true (word_eq a b).
       Arguments eq /.
 
@@ -1366,13 +1299,98 @@ Module ConcreteWord <: Word.
 
   End WordOrdered.
 
-  (* TODO use FSetlist *)
-  Axiom storage : Set.
-  Axiom storage_load : storage -> word -> word.
-  Axiom storage_store : word (* idx *) -> word (* value *) -> storage -> storage.
-  Axiom empty_storage : storage.
-  Axiom empty_storage_empty : forall idx : word,
+
+  Definition raw_byte := B.t.
+  Inductive byte' :=
+  | ByteRaw : raw_byte -> byte'
+  | ByteOfWord : word -> nat -> byte'
+  .
+  Definition byte := byte'.
+
+  Definition address := A.t.
+
+  Definition address_of_word (w : word) : address := w.
+
+  Definition word_nth_byte (w : word) (n : nat) : byte :=
+    ByteOfWord w n.
+
+  Axiom word_of_bytes : list byte -> word.
+
+  Open Scope list_scope.
+
+  Import ListNotations.
+  Lemma words_of_nth_bytes :
+    forall w b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 b16 b17 b18 b19 b20 b21 b22 b23 b24 b25 b26 b27 b28 b29 b30 b31,
+    b0 = word_nth_byte w 0 ->
+    b1 = word_nth_byte w 1 ->
+    b2 = word_nth_byte w 2 ->
+    b3 = word_nth_byte w 3 ->
+    b4 = word_nth_byte w 4 ->
+    b5 = word_nth_byte w 5 ->
+    b6 = word_nth_byte w 6 ->
+    b7 = word_nth_byte w 7 ->
+    b8 = word_nth_byte w 8 ->
+    b9 = word_nth_byte w 9 ->
+    b10 = word_nth_byte w 10 ->
+    b11 = word_nth_byte w 11 ->
+    b12 = word_nth_byte w 12 ->
+    b13 = word_nth_byte w 13 ->
+    b14 = word_nth_byte w 14 ->
+    b15 = word_nth_byte w 15 ->
+    b16 = word_nth_byte w 16 ->
+    b17 = word_nth_byte w 17 ->
+    b18 = word_nth_byte w 18 ->
+    b19 = word_nth_byte w 19 ->
+    b20 = word_nth_byte w 20 ->
+    b21 = word_nth_byte w 21 ->
+    b22 = word_nth_byte w 22 ->
+    b23 = word_nth_byte w 23 ->
+    b24 = word_nth_byte w 24 ->
+    b25 = word_nth_byte w 25 ->
+    b26 = word_nth_byte w 26 ->
+    b27 = word_nth_byte w 27 ->
+    b28 = word_nth_byte w 28 ->
+    b29 = word_nth_byte w 29 ->
+    b30 = word_nth_byte w 30 ->
+    b31 = word_nth_byte w 31 ->
+    word_of_bytes
+    [b0; b1; b2; b3; b4; b5; b6; b7; b8; b9; b10; b11; b12; b13; b14; b15; b16;
+     b17; b18; b19; b20; b21; b22; b23; b24; b25; b26; b27; b28; b29; b30; b31] =
+    w.
+  Admitted.
+
+  Axiom event : Set.
+
+  Axiom memory_state : Set.
+  Axiom empty_memory : memory_state.
+  Axiom cut_memory : word -> word -> memory_state -> list byte.
+  Axiom cut_memory_zero_nil :
+    forall start m, cut_memory start word_zero m = nil.
+
+  Module ST := FMapList.Make WordOrdered.
+
+  Definition storage := ST.t word.
+
+  Eval compute in ST.key.
+
+  Definition storage_load (m : storage) (k : word) : word :=
+    match ST.find k m with
+    | None => word_zero
+    | Some x => x
+    end.
+  Definition storage_store (k : WordOrdered.t) (v : word) (orig : storage) : storage :=
+    ST.add k v orig.
+
+  Definition empty_storage : storage := ST.empty word.
+  Lemma empty_storage_empty : forall idx : WordOrdered.t,
       is_true (word_iszero (storage_load empty_storage idx)).
+  Proof.
+    intro idx.
+    compute.
+    auto.
+  Qed.
+
+  Print Universes.
 
 End ConcreteWord.
 
@@ -1493,11 +1511,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           case s as [| s]; [ simpl; left; auto | ].
           case s as [| s]; [ simpl; left; auto | ].
           case s as [| s]; [ simpl; left; auto | ].
-          (* need definition of storage_store *)
-
-          admit. admit.
-(*
-          (* this automatically detects that the first JUMPI is not fired *)
           case s as [| s]; [ simpl; left; auto | ].
           case s as [| s]; [ simpl; left; auto | ].
           case s as [| s]; [ simpl; left; auto | ].
@@ -1516,7 +1529,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           f_equal.
           rewrite <- contract_action_expander_eq in next at 1.
           inversion next; subst.
-          auto. *)
+          auto.
         }
         {
           simpl.
