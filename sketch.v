@@ -775,7 +775,7 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
 Definition respond_to_fail_correctly (f : contract_behavior)
            (a : account_state)
            (account_state_responds_to_world : account_state -> responce_to_world -> Prop) :=
-  forall (rr : return_result) venv cenv continuation act,
+  forall venv cenv continuation act,
      Some venv = build_venv_fail a ->
      f = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
@@ -1612,9 +1612,17 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         }
       }
       { (* return *)
+        unfold respond_to_return_correctly.
+        intros rr venv cenv cont act.
+        unfold build_venv_returned.
+        (* need a definition of build_venv_returned *)
         admit.
       }
-      { (* fail *)
+      {
+        unfold respond_to_fail_correctly.
+        intros venv cenv cont act.
+        unfold build_venv_fail.
+        (* need a definition of build_venv_fail *)
         admit.
       }
     }
