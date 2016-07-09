@@ -1610,7 +1610,26 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           repeat (case s as [| s]; [ solve [left; auto] | ]).
           simpl.
 
-          assert (H : word_smaller (callenv_balance ce (account_address st)) 0%Z = false) by admit.
+          assert (H : word_smaller (callenv_balance ce (account_address st)) 0%Z = false).
+          {
+            unfold word_smaller.
+            simpl.
+            rewrite ZModulo.spec_compare.
+            assert (0 <= ZModulo.to_Z ALEN.p (callenv_balance ce (account_address st)))%Z.
+            {
+              apply (ZModulo.spec_to_Z_1).
+              unfold ALEN.p.
+              congruence.
+            }
+            case_eq (ZModulo.to_Z ALEN.p (callenv_balance ce (account_address st))
+      ?= ZModulo.to_Z ALEN.p 0)%Z; try congruence.
+            Search (_ ?= _)%Z.
+            rewrite Z.compare_nge_iff.
+            intro H'.
+            apply False_ind.
+            apply H'.
+            apply H.
+          }
           rewrite H.
           right.
           f_equal.
