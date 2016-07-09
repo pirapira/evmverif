@@ -620,8 +620,14 @@ Arguments venv_returned_bytes v /.
 Definition ret (v : variable_env) (c : constant_env) : instruction_result :=
   InstructionToWorld (ContractReturn (venv_returned_bytes v)) None.
 
-Axiom stop : variable_env -> constant_env -> instruction_result.
-Axiom pop : variable_env -> constant_env -> instruction_result.
+Definition stop (v : variable_env) (c : constant_env) : instruction_result :=
+  InstructionToWorld (ContractReturn nil) None.
+
+Definition pop (v : variable_env) (c : constant_env) : instruction_result :=
+  InstructionContinue
+    (venv_advance_pc (venv_update_stack
+       (tail v.(venv_stack))
+       v)).
 
 Require Import Coq.Program.Basics.
 
@@ -713,7 +719,15 @@ Definition build_cenv (a : account_state) :
 
 
 (* must push 1 to the stack.  balance should be updated. *)
-Axiom build_venv_returned : account_state -> return_result -> option variable_env.
+Definition build_venv_returned
+  (a : account_state) (r : return_result) : option variable_env :=
+  match a.(account_ongoing_calls) with
+  | nil => None
+  | recovered :: _ =>
+    Some (venv_update_stack (word_one :: recovered.(venv_stack)) recovered)
+         (* TODO: actually, need to update the memory *)
+  end.
+
 Axiom account_no_call_never_return :
   forall a r,
     a.(account_ongoing_calls) = nil -> build_venv_returned a r = None.
@@ -724,19 +738,30 @@ Axiom account_no_call_never_fail :
   forall a,
     a.(account_ongoing_calls) = nil -> build_venv_fail a = None.
 
+Definition account_state_pop_ongoing_call (orig : account_state) :=
+  {| account_address := orig.(account_address);
+     account_storage := orig.(account_storage);
+     account_code := orig.(account_code);
+     account_ongoing_calls := tail (orig.(account_ongoing_calls))
+  |}.
+
 (* Axiom update_account_state : account_state -> option variable_env -> account_state. *)
 
-Definition update_account_state (prev : account_state) (v_opt : option variable_env) : account_state :=
-  match v_opt with
-  | None => prev
-  | Some pushed =>
-    {|
-      account_address := prev.(account_address) ;
-      account_storage := pushed.(venv_storage) ;
-      account_code := prev.(account_code) ;
-      account_ongoing_calls := pushed :: prev.(account_ongoing_calls)
-    |}
-  end.
+Definition update_account_state (prev : account_state) (st : storage) (bal : address -> word)
+           (v_opt : option variable_env) : account_state :=
+
+  account_state_update_storage st
+      match v_opt with
+      | None =>
+        prev
+      | Some pushed =>
+        {|
+          account_address := prev.(account_address) ;
+          account_storage := pushed.(venv_storage) ;
+          account_code := prev.(account_code) ;
+          account_ongoing_calls := pushed :: prev.(account_ongoing_calls)
+        |}
+      end.
 
 (* [program_result_approximate a b] holds when
    a is identical to b or a still needs more steps *)
@@ -755,7 +780,7 @@ Definition respond_to_call_correctly c a account_state_responds_to_world :=
                           (build_cenv a) steps)
              (ProgramToWorld act st bal pushed_venv)) /\
               account_state_responds_to_world
-                (account_state_update_storage st (update_account_state a pushed_venv))
+                (account_state_update_storage st (update_account_state a st bal pushed_venv))
                                           continuation).
 
 Definition respond_to_return_correctly (r : return_result -> contract_behavior)
@@ -769,7 +794,8 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
          program_result_approximate (program_sem venv cenv steps)
                                     (ProgramToWorld act st bal pushed_venv))
      /\
-    account_state_responds_to_world (update_account_state a pushed_venv)
+    account_state_responds_to_world
+      (update_account_state (account_state_pop_ongoing_call a) st bal pushed_venv)
                                     continuation.
 
 Definition respond_to_fail_correctly (f : contract_behavior)
@@ -783,7 +809,8 @@ Definition respond_to_fail_correctly (f : contract_behavior)
          program_result_approximate (program_sem venv cenv steps)
                                     (ProgramToWorld act st bal pushed_venv))
      /\
-    account_state_responds_to_world (update_account_state a pushed_venv)
+    account_state_responds_to_world
+      (update_account_state (account_state_pop_ongoing_call a) st bal pushed_venv)
                                     continuation.
 
 
@@ -1413,7 +1440,6 @@ Module ExamplesOnConcreteWord.
     PUSH1 (word_of_N 0) ::
     SLOAD ::
     DUP1 ::
-    DUP1 ::
     PUSH1 (word_of_N 2) ::
     JUMPI ::
     PUSH1 (word_of_N 1) ::
@@ -1429,8 +1455,7 @@ Module ExamplesOnConcreteWord.
     PUSH1 (word_of_N 0) ::
     CALL ::
     POP ::
-    PUSH1 (word_of_N 1) ::
-    SUB ::
+    PUSH1 (word_of_N 0) ::
     PUSH1 (word_of_N 0) ::
     SSTORE ::
     STOP ::
@@ -1445,7 +1470,13 @@ Module ExamplesOnConcreteWord.
        account_ongoing_calls := nil |}) \/
      (n = 1%Z /\
       st.(account_code) = example2_program /\
-      storage_load (account_storage st) 0%Z = 1%Z
+      storage_load (account_storage st) 0%Z = 1%Z /\
+      exists ve, (st.(account_ongoing_calls) = ve :: nil /\
+             ve.(venv_prg_sfx) =
+                  POP
+                     :: PUSH1 0%Z
+                        :: PUSH1 0%Z :: SSTORE :: STOP :: nil
+                  )
      )
   .
 
@@ -1472,7 +1503,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   else if word_eq word_one depth then
     Respond
       (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance word_one))
-      (fun retval => ContractAction (ContractReturn retval) (call_but_fail_on_reentrance word_zero))
+      (fun _ => ContractAction (ContractReturn nil) (call_but_fail_on_reentrance word_zero))
       (ContractAction ContractFail (call_but_fail_on_reentrance word_zero))
   else
     Respond
@@ -1494,7 +1525,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     call_but_fail_on_reentrance 1%Z =
     Respond
       (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance word_one))
-      (fun retval => ContractAction (ContractReturn retval) (call_but_fail_on_reentrance word_zero))
+      (fun retval => ContractAction (ContractReturn nil) (call_but_fail_on_reentrance word_zero))
       (ContractAction ContractFail (call_but_fail_on_reentrance word_zero)).
   Admitted.
 
@@ -1529,7 +1560,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         {
           intro s.
           repeat (case s as [| s]; [ solve [left; auto] | ]).
-
+          
           simpl.
           assert (H : word_smaller (callenv_balance ce example2_address) 0%Z = false) by admit.
           rewrite H.
@@ -1551,8 +1582,12 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           apply example2_spec_impl_match.
           unfold example2_depth_n_state.
           right.
-          auto.
-          (* this place should be come harder and harder as I specify the
+          split; auto.
+          simpl.
+          split; auto.
+          split; auto.
+          eexists; eauto.
+        (* this place should be come harder and harder as I specify the
            * state at depth 1
            *)
         }
@@ -1560,8 +1595,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       {
         unfold respond_to_return_correctly.
         intros ? ? ? ? ?.
+        simpl.
         unfold build_venv_returned.
-        rewrite account_no_call_never_return; auto.
+        simpl.
         congruence.
       }
       {
@@ -1574,6 +1610,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       intros H.
       destruct H as [n1 st_code].
       destruct st_code as [st_code st_load].
+      destruct st_load as [st_load st_ongoing].
       subst.
       unfold example2_spec.
       rewrite call_but_fail_on_reentrace_1_eq.
@@ -1615,8 +1652,59 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         unfold respond_to_return_correctly.
         intros rr venv cenv cont act.
         unfold build_venv_returned.
-        (* need a definition of build_venv_returned *)
-        admit.
+        elim st_ongoing.
+        intros prev prevH.
+        case prevH as [prevH prevH'].
+        rewrite prevH.
+        intro H.
+        inversion H; subst.
+        clear H.
+        intros act_cont_eq.
+        eexists.
+        eexists.
+        eexists.
+        rewrite prevH'.
+        split.
+        {
+          intro s.
+          repeat (case s as [| s]; [ solve [left; auto] | ]).
+          simpl.
+          right.
+          f_equal.
+          inversion act_cont_eq.
+          auto.
+        }
+        {
+          inversion act_cont_eq.
+          apply example2_spec_impl_match.
+          unfold example2_depth_n_state.
+          left.
+          split; auto.
+          unfold update_account_state.
+          elim st_ongoing.
+          intro prev_v.
+          intro H.
+          case H as [H3 H4].
+          unfold account_state_pop_ongoing_call.
+          simpl.
+          f_equal.
+          {
+            (* need to strengthen the condition *)
+            admit.
+          }
+          {
+            (* need to strengthen the condition *)
+            admit.
+          }
+          {
+            (* need to strengthen the condition *)
+            admit.
+          }
+          {
+            rewrite H3.
+            auto.
+          }
+        }
       }
       {
         unfold respond_to_fail_correctly.
