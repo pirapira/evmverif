@@ -1415,10 +1415,10 @@ Module ConcreteWord <: Word.
     | Some x => x
     end.
   Definition storage_store (k : WordOrdered.t) (v : word) (orig : storage) : storage :=
-    (* TODO if the value is zero, remove the entry from the map!
-       This makes example2 easier.
-     *)
-    ST.add k v orig.
+    if word_eq word_zero v then
+      ST.remove k orig
+    else
+      ST.add k v orig.
 
   Definition empty_storage : storage := ST.empty word.
   Lemma empty_storage_empty : forall idx : WordOrdered.t,
@@ -1469,23 +1469,23 @@ Module ExamplesOnConcreteWord.
   Variable example2_address : address.
 
   Definition example2_depth_n_state  (n : word) (st : account_state) :=
-    (n = 0%Z /\ st =     {| account_address := example2_address ;
-       account_storage := empty_storage ;
-       account_code := example2_program ;
-       account_ongoing_calls := nil |}) \/
+    (n = 0%Z /\
+       st.(account_address) = example2_address /\
+       is_true (ST.equal word_eq (st.(account_storage)) empty_storage) /\
+       st.(account_code) = example2_program /\
+       st.(account_ongoing_calls) = nil ) \/
      (n = 1%Z /\
       st.(account_code) = example2_program /\
       storage_load (account_storage st) 0%Z = 1%Z /\
       st.(account_address) = example2_address /\
-      storage_store 0%Z 0%Z st.(account_storage) =
-      storage_store 0%Z 0%Z empty_storage /\
       exists ve, (st.(account_ongoing_calls) = ve :: nil /\
              ve.(venv_prg_sfx) =
              ISZERO ::
                PUSH1 0%Z :: JUMPI
                      :: PUSH1 0%Z
                         :: PUSH1 0%Z :: SSTORE :: STOP :: nil
-                  )
+                  /\
+                  is_true (ST.equal word_eq (storage_store 0%Z 0%Z ve.(venv_storage)) empty_storage))
      )
   .
 
@@ -1553,6 +1553,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     {
       intro nst.
       destruct nst as [nst0 nst1].
+        case nst1 as [nst1 nst2].
+        case nst2 as [nst2 nst3].
+        case nst3 as [nst3 nst4].
       subst.
       clear n_state.
       subst.
@@ -1568,9 +1571,23 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         split.
         {
           intro s.
+          simpl.
+          rewrite nst3.
+          repeat (case s as [| s]; [ solve [left; auto] | ]).
+          assert (stl : forall idx, storage_load (account_storage st) idx = storage_load empty_storage idx).
+          {
+            (* use nst2 *)
+            admit.
+          }
+          simpl.
+          rewrite !stl.
+          unfold storage_load.
+          unfold empty_storage.
+          simpl.
           repeat (case s as [| s]; [ solve [left; auto] | ]).
           simpl.
-          assert (H : word_smaller (callenv_balance ce example2_address) 0%Z = false) by admit.
+
+          assert (H : word_smaller (callenv_balance ce (account_address st)) 0%Z = false) by admit.
           rewrite H.
           right.
           f_equal.
@@ -1593,10 +1610,17 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           split; auto.
           simpl.
           split; auto.
-          split; auto.
+          split.
+          {
+            unfold storage_load.
+            erewrite ST.find_1.
+            { eauto. }
+            apply ST.add_1.
+            auto.
+          }
           split; auto.
           eexists; eauto.
-          (* some extentional equality... *) admit.
+          admit.
 
        (* this place should be come harder and harder as I specify the
            * state at depth 1
@@ -1606,9 +1630,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       {
         unfold respond_to_return_correctly.
         intros ? ? ? ? ?.
-        simpl.
         unfold build_venv_returned.
-        simpl.
+        rewrite nst4.
         congruence.
       }
       {
@@ -1667,10 +1690,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         intros prev prevH.
         case prevH as [prevH prevH'].
         case prevH' as [prevH' prevH''].
-        case prevH' as [prevH''' prevH''''].
-        simpl in prevH''.
-        case prevH'' as [prevH5 prevH6].
-        rewrite prevH5.
+        case prevH'' as [prevH'' prevH'''].
+        rewrite prevH'.
         intro H.
         inversion H; subst.
         clear H.
@@ -1681,6 +1702,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         split.
         {
           intro s.
+          rewrite prevH''.
           repeat (case s as [| s]; [ solve [left; auto] | ]).
           simpl.
           right.
@@ -1702,25 +1724,11 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           case H4 as [H4 H5].
           unfold account_state_pop_ongoing_call.
           simpl.
-          f_equal.
-          {
-            rewrite prev.
-            solve [auto].
-          }
-          {
-            (* need to strengthen the condition *)
-            (* maybe change storage_store *)
-
-            admit.
-          }
-          {
-            assumption.
-          }
-          {
-            case H5 as [H5 H6].
-            rewrite H5.
-            auto.
-          }
+          rewrite prev.
+          split; auto.
+          split; auto.
+          split; auto.
+          rewrite H4; auto.
         }
       }
       {
