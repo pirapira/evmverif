@@ -44,9 +44,13 @@
 (* Many aspects of the EVM semantics do not care how words are represented. *)
 
 Require Import NArith.
+Require FSetList.
+Require Import OrderedType.
 
 Module Type Word.
-  Parameter word  : Set.      (* Does anyone know a good uint256 library for Coq? *)
+
+  Parameter word : Set.
+
   Parameter word_eq : word -> word -> bool.
   Parameter word_add : word -> word -> word.
   Parameter word_sub : word -> word -> word.
@@ -126,6 +130,13 @@ Module Type Word.
   Parameter cut_memory : word -> word -> memory_state -> list byte.
   Parameter cut_memory_zero_nil :
     forall start m, cut_memory start word_zero m = nil.
+
+  Parameter storage : Set.
+  Parameter storage_load : storage -> word -> word.
+  Parameter storage_store : word (* idx *) -> word (* value *) -> storage -> storage.
+  Parameter empty_storage : storage.
+  Parameter empty_storage_empty : forall idx : word,
+      is_true (word_iszero (storage_load empty_storage idx)).
 
 End Word.
 
@@ -343,11 +354,6 @@ Function drop_bytes (prog : list instruction) (bytes : N)
  ** Execution Environments
  **)
 
-Definition storage := word -> word. (* TODO maybe this should be FSet *)
-
-Definition empty_storage : storage :=
-  fun _ => word_zero.
-
 Record variable_env :=
   { venv_stack : list word
   ; venv_memory : memory_state
@@ -455,6 +461,21 @@ Definition venv_change_sfx (pos : N) (v : variable_env)
     venv_value_sent := v.(venv_value_sent);
   |}.
 
+Definition function_update (addr : word) (val : word) (f : word -> word) : (word -> word) :=
+  fun x => (if word_eq x addr then val else f x).
+
+Definition venv_update_storage (addr : word) (val : word) (v : variable_env)
+           : variable_env :=
+  {|
+    venv_stack := v.(venv_stack) ;
+    venv_memory := v.(venv_memory);
+    venv_storage := storage_store addr val v.(venv_storage);
+    venv_prg_sfx := v.(venv_prg_sfx);
+    venv_balance := v.(venv_balance);
+    venv_caller := v.(venv_caller);
+    venv_value_sent := v.(venv_value_sent);
+  |}.
+
 Definition venv_first_instruction (v : variable_env) : option instruction :=
   hd_error v.(venv_prg_sfx).
 
@@ -503,9 +524,17 @@ Definition stack_2_1_op (v : variable_env) (c : constant_env)
   end.
 
 Definition sload (v : variable_env) (idx : word) : word :=
-  v.(venv_storage) idx.
+  storage_load v.(venv_storage) idx.
 
-Axiom sstore : variable_env -> constant_env -> instruction_result.
+Definition sstore (v : variable_env) (c : constant_env) : instruction_result :=
+  match v.(venv_stack) with
+    | addr :: val :: stack_tail =>
+      InstructionContinue
+        (venv_advance_pc
+           (venv_update_stack stack_tail
+                              (venv_update_storage addr val v)))
+    | _ => instruction_failure_result
+  end.
 
 Definition jump (v : variable_env) (c : constant_env) : instruction_result :=
   match venv_stack_top v with
@@ -567,6 +596,8 @@ Definition call (v : variable_env) (c : constant_env) : instruction_result :=
   | _ =>
     InstructionToWorld ContractFail None (* this environment should disappear *)
   end.
+
+Arguments call v c /.
 
 
 Definition venv_returned_bytes v :=
@@ -645,6 +676,8 @@ Definition account_state_update_storage new_st orig :=
      account_storage := new_st;
      account_ongoing_calls := orig.(account_ongoing_calls)
   |}.
+
+Arguments account_state_update_storage new_st orig /.
 
 (** The ideas is that an account state defines a response_to_world **)
 
@@ -1104,6 +1137,8 @@ Module ConcreteWord <: Word.
   Definition word_add (a b : W.t) :=
     ZnZ.add a b.
 
+  Arguments word_add a b /.
+
   Definition word_sub := ZnZ.sub.
 
   Definition word_one := ZnZ.one.
@@ -1212,6 +1247,133 @@ Module ConcreteWord <: Word.
   Axiom cut_memory_zero_nil :
     forall start m, cut_memory start word_zero m = nil.
 
+  (* Before using FSetList as storage,
+     I need word as OrderedType *)
+
+  Module WordOrdered : OrderedType.
+
+      Definition t := word.
+      Definition eq a b := is_true (word_eq a b).
+      Arguments eq /.
+
+      Definition lt a b := is_true (word_smaller a b).
+      Arguments lt /.
+
+
+      Lemma eq_refl : forall x : t, eq x x.
+      Proof.
+        intro.
+        unfold eq.
+        unfold word_eq.
+        simpl.
+        rewrite ZModulo.spec_compare.
+        rewrite Z.compare_refl.
+        auto.
+      Qed.
+
+      Lemma eq_sym : forall x y : t, eq x y -> eq y x.
+      Proof.
+        intros ? ?.
+        simpl.
+        unfold word_eq. simpl.
+        rewrite !ZModulo.spec_compare.
+        rewrite <-Zcompare_antisym.
+        simpl.
+        set (r := (ZModulo.to_Z ALEN.p y ?= ZModulo.to_Z ALEN.p x)%Z).
+        case r; unfold CompOpp; auto.
+      Qed.
+
+      Lemma eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z.
+      Proof.
+        intros ? ? ?.
+        unfold eq.
+        unfold word_eq.
+        simpl.
+        rewrite !ZModulo.spec_compare.
+        set (xy := (ZModulo.to_Z ALEN.p x ?= ZModulo.to_Z ALEN.p y)%Z).
+        case_eq xy; auto; try congruence.
+        unfold xy.
+        rewrite Z.compare_eq_iff.
+        intro H.
+        rewrite H.
+        auto.
+      Qed.
+
+      Lemma lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
+      Proof.
+        intros x y z.
+        unfold lt.
+        unfold word_smaller.
+        simpl.
+        rewrite !ZModulo.spec_compare.
+        case_eq (ZModulo.to_Z ALEN.p x ?= ZModulo.to_Z ALEN.p y)%Z; try congruence.
+        case_eq (ZModulo.to_Z ALEN.p y ?= ZModulo.to_Z ALEN.p z)%Z; try congruence.
+        Search _ (_ ?= _)%Z.
+        intros H I _ _.
+        erewrite (Zcompare_Lt_trans); auto; eassumption.
+      Qed.
+
+      Lemma lt_not_eq : forall x y : t, lt x y -> ~ eq x y.
+      Proof.
+        unfold t.
+        intros x y.
+        unfold lt; unfold eq.
+        unfold word_smaller; unfold word_eq.
+        simpl.
+        case_eq (ZModulo.compare ALEN.p x y); congruence.
+      Qed.
+
+      Definition compare : forall x y : t, Compare lt eq x y.
+      Proof.
+        intros x y.
+        unfold lt.
+        case_eq (word_smaller x y); intro L.
+        { apply LT; auto. }
+        unfold eq.
+        case_eq (word_eq x y); intro E.
+        { apply EQ; auto. }
+        apply GT.
+        unfold word_smaller.
+        unfold word_smaller in L.
+        unfold word_eq in E.
+        simpl in *.
+
+        rewrite ZModulo.spec_compare in *.
+
+        case_eq (ZModulo.to_Z ALEN.p y ?= ZModulo.to_Z ALEN.p x)%Z; try congruence.
+
+        {
+          rewrite Z.compare_eq_iff.
+          intro H.
+          rewrite H in E.
+          rewrite Z.compare_refl in E.
+          congruence.
+        }
+        {
+          rewrite Zcompare_Gt_Lt_antisym.
+          intro H.
+          rewrite H in L.
+          congruence.
+        }
+      Defined.
+
+      Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
+      Proof.
+        unfold eq.
+        intros x y.
+        case (word_eq x y); [left | right]; congruence.
+      Defined.
+
+  End WordOrdered.
+
+  (* TODO use FSetlist *)
+  Axiom storage : Set.
+  Axiom storage_load : storage -> word -> word.
+  Axiom storage_store : word (* idx *) -> word (* value *) -> storage -> storage.
+  Axiom empty_storage : storage.
+  Axiom empty_storage_empty : forall idx : word,
+      is_true (word_iszero (storage_load empty_storage idx)).
+
 End ConcreteWord.
 
 
@@ -1249,89 +1411,135 @@ Module ExamplesOnConcreteWord.
 
   Variable example2_address : address.
 
-  Definition example2_account_state :=
+  Definition example2_account_state (n : word) :=
     {| account_address := example2_address ;
-       account_storage := empty_storage ;
+       account_storage := storage_store (0%Z) n empty_storage ;
+       (* TODO: this does not work.  maybe use finite map as sorted list *)
+
        account_code := example2_program ;
        account_ongoing_calls := nil |}.
 
 
-Variable something_to_call : call_arguments.
+Definition something_to_call :=
+     {|
+     callarg_gaslimit := 0%Z;
+     callarg_code := address_of_word 0%Z;
+     callarg_recipient := address_of_word 0%Z;
+     callarg_value := 0%Z;
+     callarg_data := cut_memory 0%Z 0%Z empty_memory;
+     callarg_output_begin := 0%Z;
+     callarg_output_size := storage_load empty_storage 0%Z |}.
 
 (* TODO: remove duplicate somehow *)
-CoFixpoint call_but_fail_on_reentrance (depth : nat) :=
-  match depth with
-  | O =>
+CoFixpoint call_but_fail_on_reentrance (depth : word) :=
+  if word_eq word_zero depth then
     Respond
       (fun _ =>
          ContractAction (ContractCall something_to_call)
-              (call_but_fail_on_reentrance (S O)))
-      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance O))
-      (ContractAction ContractFail (call_but_fail_on_reentrance O))
-  | S O => (* now the callee responds or reenters *)
+              (call_but_fail_on_reentrance word_one))
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance word_zero))
+      (ContractAction ContractFail (call_but_fail_on_reentrance word_zero))
+  else if word_eq word_one depth then
     Respond
-      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance (S O)))
-      (fun retval => ContractAction (ContractReturn retval) (call_but_fail_on_reentrance O))
-      (ContractAction ContractFail (call_but_fail_on_reentrance O))
-  | S (S n) =>
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance word_one))
+      (fun retval => ContractAction (ContractReturn retval) (call_but_fail_on_reentrance word_zero))
+      (ContractAction ContractFail (call_but_fail_on_reentrance word_zero))
+  else
     Respond
-      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance (S (S n))))
-      (fun retval => ContractAction ContractFail (call_but_fail_on_reentrance (S n)))
-      (ContractAction ContractFail (call_but_fail_on_reentrance (S n)))
-  end.
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance depth))
+      (fun retval => ContractAction ContractFail (call_but_fail_on_reentrance (word_sub depth word_one)))
+      (ContractAction ContractFail (call_but_fail_on_reentrance (word_sub depth word_one))).
 
   Lemma call_but_fail_on_reentrace_0_eq :
-    call_but_fail_on_reentrance 0 =
+    call_but_fail_on_reentrance 0%Z =
     Respond
       (fun _ =>
          ContractAction (ContractCall something_to_call)
-              (call_but_fail_on_reentrance (S O)))
-      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance O))
-      (ContractAction ContractFail (call_but_fail_on_reentrance O)).
+              (call_but_fail_on_reentrance word_one))
+      (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance word_zero))
+      (ContractAction ContractFail (call_but_fail_on_reentrance word_zero)).
   Admitted.
 
-  Definition example2_spec : responce_to_world :=
-    call_but_fail_on_reentrance 0.
+  Definition example2_spec (depth: word) : responce_to_world :=
+    call_but_fail_on_reentrance depth.
 
   Theorem example2_spec_impl_match :
-    account_state_responds_to_world
-      example2_account_state example2_spec.
+    forall depth : word,
+      (depth = 0%Z \/ depth = 1%Z) ->
+      account_state_responds_to_world
+        (example2_account_state depth) (example2_spec depth).
   Proof.
     cofix.
-    unfold example2_spec.
-    rewrite call_but_fail_on_reentrace_0_eq.
-    apply AccountStep.
+    intros d H.
+    destruct H.
     {
-      unfold respond_to_call_correctly.
-      intros ce a con next.
-      eexists.
-      eexists.
-      eexists.
-      split.
+      subst.
+      unfold example2_spec.
+      rewrite call_but_fail_on_reentrace_0_eq.
+      apply AccountStep.
       {
-        intro s.
-        case s as [| s]; [ simpl; left; auto | ].
-        case s as [| s]; [ simpl; left; auto | ].
-        case s as [| s]; [ simpl; left; auto | ].
-        case s as [| s]; [ simpl; left; auto | ].
-        case s as [| s]; [ simpl; left; auto | ].
-        case s as [| s]; [ simpl; left; auto | ].
-        case s as [| s]; [ simpl; left; auto | ].
-        (* this automatically detects that the first JUMPI is not fired *)
-        case s as [| s]; [ simpl; left; auto | ].
-        case s as [| s]; [ simpl; left; auto | ].
-        case s as [| s]; [ simpl; left; auto | ].
-        case s as [| s]; [ simpl; left; auto | ].
+        unfold respond_to_call_correctly.
+        intros ce a con next.
+        eexists.
+        eexists.
+        eexists.
+        split.
+        {
+          intro s.
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          (* need definition of storage_store *)
 
-        (* here the definition of sstore is needed *)
-        admit. admit.
+          admit. admit.
+(*
+          (* this automatically detects that the first JUMPI is not fired *)
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+          case s as [| s]; [ simpl; left; auto | ].
+
+          simpl.
+          assert (H : word_smaller (callenv_balance ce example2_address) 0%Z = false) by admit.
+          rewrite H.
+          right.
+          f_equal.
+          rewrite <- contract_action_expander_eq in next at 1.
+          inversion next; subst.
+          auto. *)
+        }
+        {
+          simpl.
+          rewrite <- contract_action_expander_eq in next at 1.
+          inversion next; subst.
+          (* TODO: example2_account_state 1, should contain account_ongoing_calls *)
+
+          admit.
+        }
       }
       {
-        admit.
+        unfold respond_to_return_correctly.
+        intros ? ? ? ? ?.
+        unfold example2_account_state.
+        unfold build_venv_returned.
+        rewrite account_no_call_never_return; auto.
+        congruence.
       }
-    }
-    {
-      admit.
+      {
+        intros ? ? ? ?.
+        rewrite account_no_call_never_fail; auto.
+        congruence.
+      }
     }
     {
       admit.
