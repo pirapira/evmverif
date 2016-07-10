@@ -1578,6 +1578,93 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Definition example2_spec (depth: word) : responce_to_world :=
     call_but_fail_on_reentrance depth.
 
+  Lemma update_remove_eq :
+    forall orig,
+      is_true (ST.equal word_eq orig empty_storage) ->
+      is_true
+        (ST.equal word_eq
+                  (storage_store 0%Z 0%Z (ST.add 0%Z 1%Z orig))
+                  empty_storage).
+  Proof.
+    intros orig nst2.
+    apply ST.equal_1.
+    split.
+    {
+      intro k.
+      Search ST.Raw.PX.In.
+      unfold storage_store.
+      simpl.
+      split.
+      { intro H.
+        apply False_ind.
+        case_eq (word_eq k 0%Z).
+        { intro k0.
+          apply ST.Raw.remove_1 in H; auto.
+          { apply ST.Raw.add_sorted.
+            apply ST.sorted. }
+          apply ST.E.eq_sym.
+          assumption.
+        }
+        {
+          intro neq.
+          unfold ST.Raw.PX.In in H.
+          case H as [e H].
+          Search _ ST.Raw.PX.MapsTo.
+          apply ST.Raw.remove_3 in H.
+          {
+            Search _ ST.Raw.PX.MapsTo.
+            apply ST.Raw.add_3 in H.
+            {
+              apply ST.equal_2 in nst2.
+              case nst2 as [I _].
+              generalize (I k).
+              unfold ST.Raw.PX.In.
+              intro I'.
+              case I' as [I0 _].
+              simpl in I0.
+              Search _ ST.Raw.empty.
+              case I0.
+              {
+                exists e.
+                apply H.
+              }
+              {
+                intros x J.
+                eapply ST.Raw.empty_1.
+                apply J.
+              }
+            }
+            {
+              intro K.
+              apply ST.E.eq_sym in K.
+              congruence.
+            }
+          }
+          {
+            Search Sorted.
+            apply ST.Raw.add_sorted.
+            apply ST.sorted.
+          }
+        }
+      }
+      {
+        intro H.
+        apply False_ind.
+        case H.
+        intros x Hx.
+        apply (ST.Raw.empty_1 Hx).
+      }
+    }
+    {
+      intros k e e' H I.
+      apply False_ind.
+      generalize I.
+      unfold empty_storage.
+      generalize (ST.empty_1 I).
+      auto.
+    }
+  Qed.
+
   Theorem example2_spec_impl_match :
     forall st n,
           example2_depth_n_state n st ->
@@ -1700,9 +1787,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           split; auto.
           split.
           {
-            (* has to reason about the list *)
-            (* use the lemma from above *)
-            admit.
+            apply update_remove_eq.
+            assumption.
           }
           eexists; eauto.
           split.
@@ -1714,85 +1800,11 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             split; auto.
             split; auto.
             simpl.
-            (* TODO: this shoulbe a lemma *)
 
-            Search _ ST.equal.
-            apply ST.equal_1.
-            split.
-            {
-              intro k.
-              Search ST.Raw.PX.In.
-              unfold storage_store.
-              simpl.
-              split.
-              { intro H.
-                apply False_ind.
-                case_eq (word_eq k 0%Z).
-                { intro k0.
-                  apply ST.Raw.remove_1 in H; auto.
-                  { apply ST.Raw.add_sorted.
-                    apply ST.sorted. }
-                  apply ST.E.eq_sym.
-                  assumption.
-                }
-                {
-                  intro neq.
-                  unfold ST.Raw.PX.In in H.
-                  case H as [e H].
-                  Search _ ST.Raw.PX.MapsTo.
-                  apply ST.Raw.remove_3 in H.
-                  {
-                    Search _ ST.Raw.PX.MapsTo.
-                    apply ST.Raw.add_3 in H.
-                    {
-                      apply ST.equal_2 in nst2.
-                      case nst2 as [I _].
-                      generalize (I k).
-                      unfold ST.Raw.PX.In.
-                      intro I'.
-                      case I' as [I0 _].
-                      simpl in I0.
-                      Search _ ST.Raw.empty.
-                      case I0.
-                      {
-                        exists e.
-                        apply H.
-                      }
-                      {
-                        intros x J.
-                        eapply ST.Raw.empty_1.
-                        apply J.
-                      }
-                    }
-                    {
-                      intro K.
-                      apply ST.E.eq_sym in K.
-                      congruence.
-                    }
-                  }
-                  {
-                    Search Sorted.
-                    apply ST.Raw.add_sorted.
-                    apply ST.sorted.
-                  }
-                }
-              }
-              {
-                intro H.
-                apply False_ind.
-                case H.
-                intros x Hx.
-                apply (ST.Raw.empty_1 Hx).
-              }
-            }
-            {
-              intros k e e' H I.
-              apply False_ind.
-              generalize I.
-              unfold empty_storage.
-              generalize (ST.empty_1 I).
-              auto.
-            }
+
+            apply update_remove_eq.
+            assumption.
+
           }
 
        (* this place should be come harder and harder as I specify the
@@ -1944,11 +1956,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           left.
           split; auto.
           split; auto.
-          split.
-          {
-            simpl.
-            tauto.
-          }
+          split; [ solve [simpl; tauto] | ].
           split; auto.
           simpl.
           rewrite st_ongoing.
@@ -1956,6 +1964,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         }
       }
     }
-  Admitted.
+  Qed.
 
 End ExamplesOnConcreteWord.
