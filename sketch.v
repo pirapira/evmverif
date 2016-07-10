@@ -718,7 +718,7 @@ Definition build_cenv (a : account_state) :
    |}.
 
 
-(* must push 1 to the stack.  balance should be updated. *)
+(* TODO: balance should be updated. *)
 Definition build_venv_returned
   (a : account_state) (r : return_result) : option variable_env :=
   match a.(account_ongoing_calls) with
@@ -728,15 +728,18 @@ Definition build_venv_returned
          (* TODO: actually, need to update the memory *)
   end.
 
-Axiom account_no_call_never_return :
-  forall a r,
-    a.(account_ongoing_calls) = nil -> build_venv_returned a r = None.
+Arguments build_venv_returned a r /.
 
-(* must push 0 to the stack.  balance should be updated too *)
-Axiom build_venv_fail : account_state -> option variable_env.
-Axiom account_no_call_never_fail :
-  forall a,
-    a.(account_ongoing_calls) = nil -> build_venv_fail a = None.
+(* TODO: balance should be updated *)
+Definition build_venv_fail
+           (a : account_state) : option variable_env :=
+  match a.(account_ongoing_calls) with
+  | nil => None
+  | recovered :: _ =>
+    Some (venv_update_stack (word_zero :: recovered.(venv_stack)) recovered)
+  end.
+
+Arguments build_venv_fail a /.
 
 Definition account_state_pop_ongoing_call (orig : account_state) :=
   {| account_address := orig.(account_address);
@@ -988,13 +991,17 @@ Section Example0Continue.
     {
       unfold respond_to_return_correctly.
       intros rr venv cenv continuation act.
-      rewrite account_no_call_never_return; auto.
+      unfold example0_account_state.
+      unfold build_venv_returned.
+      simpl.
       congruence.
     }
     {
       unfold respond_to_fail_correctly.
       intros venv cenv continuation act.
-      rewrite account_no_call_never_fail; auto.
+      unfold example0_account_state.
+      unfold build_venv_fail.
+      simpl.
       congruence.
     }
   Qed.
@@ -1101,12 +1108,12 @@ Section Example1Continue.
     }
     {
       intros ? ? ? ? ?.
-      rewrite account_no_call_never_return; auto.
+      simpl.
       congruence.
     }
     {
       intros ? ? ? ?.
-      rewrite account_no_call_never_fail; auto.
+      simpl.
       congruence.
     }
   Qed.
@@ -1763,7 +1770,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       }
       {
         intros ? ? ? ?.
-        rewrite account_no_call_never_fail; auto.
+        simpl.
+        rewrite nst4.
         congruence.
       }
     }
