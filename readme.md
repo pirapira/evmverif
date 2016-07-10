@@ -19,6 +19,7 @@ An Ethereum contract can be entered in different ways
 * being called from other accounts
     * This can be re-enterance
 * being returned/failed from other calls.
+
 The contract responds to all of these by
 * returning
 * failing, or
