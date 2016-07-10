@@ -1490,10 +1490,10 @@ Module ExamplesOnConcreteWord.
     CALL ::
     ISZERO ::
     PUSH1 (word_of_N 0) ::
+    JUMPI ::
+    PUSH1 (word_of_N 0) ::
     PUSH1 (word_of_N 0) ::
     SSTORE ::
-    PUSH1 (word_of_N 0) ::
-    JUMPI ::
     STOP ::
     nil.
 
@@ -1514,10 +1514,10 @@ Module ExamplesOnConcreteWord.
              ve.(venv_prg_sfx) =
     ISZERO ::
     PUSH1 (word_of_N 0) ::
+    JUMPI ::
+    PUSH1 (word_of_N 0) ::
     PUSH1 (word_of_N 0) ::
     SSTORE ::
-    PUSH1 (word_of_N 0) ::
-    JUMPI ::
     STOP ::
     nil
                   /\
