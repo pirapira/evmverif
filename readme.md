@@ -30,3 +30,9 @@ to respond to any entrance.  The contract should be ready for infinite number
 of interactions (until it executes `SUICIDE`).
 
 This idea is coinductively captured in `responce_to_world` type.
+
+## Examples
+
+* `always_fail`: a contract that always fails
+* `always_return`: a contract that always returns (gas is not modelled yet)
+* `call_but_fail_on_reentrance`: a contract that calls another contract but fails when the other contract calls back
