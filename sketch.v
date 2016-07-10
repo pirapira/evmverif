@@ -773,6 +773,7 @@ Definition account_state_pop_ongoing_call (orig : account_state) :=
      account_ongoing_calls := tail (orig.(account_ongoing_calls))
   |}.
 
+(* TODO: use venv widely and remove other arguments *)
 Definition update_account_state (prev : account_state) (act: contract_action)
            (st : storage) (bal : address -> word)
            (v_opt : option variable_env) : account_state :=
@@ -1520,7 +1521,8 @@ Module ExamplesOnConcreteWord.
     STOP ::
     nil
                   /\
-                  is_true (ST.equal word_eq (storage_store 0%Z 0%Z ve.(venv_storage)) empty_storage))
+                  is_true (ST.equal word_eq (storage_store 0%Z 0%Z ve.(venv_storage)) empty_storage) /\
+   is_true (ST.equal word_eq (venv_storage_at_call ve) empty_storage))
      )
   .
 
@@ -1710,6 +1712,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           }
           {
             split; auto.
+            split; auto.
             simpl.
             (* TODO: this shoulbe a lemma *)
 
@@ -1894,6 +1897,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           split; auto.
           rewrite prevH'.
           split; auto.
+          tauto.
         }
       }
       {
@@ -1943,8 +1947,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           split.
           {
             simpl.
-            (* TODO! need to revert to the storage when called *)
-            admit.
+            tauto.
           }
           split; auto.
           simpl.
