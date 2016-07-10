@@ -1897,12 +1897,29 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           simpl.
           unfold jump.
           simpl.
-          (* need information about cenv program *)
-          admit.
+          rewrite st_code.
+          simpl.
+          right.
+          f_equal.
         }
         {
-          (* wait till above *)
-          admit.
+          simpl.
+          apply example2_spec_impl_match.
+          unfold example2_depth_n_state.
+          left.
+          split; auto.
+          split; auto.
+          split.
+          {
+            simpl.
+            (* ve_str should be useful here.  Something looks wrong. *)
+
+            admit.
+          }
+          split; auto.
+          simpl.
+          rewrite st_ongoing.
+          auto.
         }
       }
     }
