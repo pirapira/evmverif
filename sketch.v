@@ -1913,13 +1913,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           left.
           split; auto.
           split; auto.
-          split.
-          {
-            simpl.
-            (* ve_str should be useful here.  Something looks wrong. *)
-
-            admit.
-          }
+          split; auto.
           split; auto.
           simpl.
           rewrite st_ongoing.
@@ -1927,6 +1921,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         }
       }
     }
-  Admitted.
+  Qed.
 
 End ExamplesOnConcreteWord.
