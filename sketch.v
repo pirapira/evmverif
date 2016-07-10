@@ -1489,6 +1489,7 @@ Module ExamplesOnConcreteWord.
       st.(account_code) = example2_program /\
       storage_load (account_storage st) 0%Z = 1%Z /\
       st.(account_address) = example2_address /\
+      is_true (ST.equal word_eq (storage_store 0%Z 0%Z st.(account_storage)) empty_storage)  /\
       exists ve, (st.(account_ongoing_calls) = ve :: nil /\
              ve.(venv_prg_sfx) =
     ISZERO ::
@@ -1676,6 +1677,12 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             auto.
           }
           split; auto.
+          split.
+          {
+            (* has to reason about the list *)
+            (* use the lemma from above *)
+            admit.
+          }
           eexists; eauto.
           split.
           {
@@ -1685,6 +1692,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           {
             split; auto.
             simpl.
+            (* TODO: this shoulbe a lemma *)
+
             Search _ ST.equal.
             apply ST.equal_1.
             split.
@@ -1831,6 +1840,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         unfold build_venv_returned.
         elim st_ongoing.
         intros prev prevH.
+        case prevH as [st_str prevH].
         case prevH as [prevH prevH'].
         case prevH' as [prevH' prevH''].
         case prevH'' as [prevH'' prevH'''].
@@ -1860,18 +1870,11 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           left.
           split; auto.
           unfold update_account_state.
-          elim st_ongoing.
-          intro prev_v.
-          intro H.
-          case H as [H3 H4].
-          case H4 as [H4 H5].
           unfold account_state_pop_ongoing_call.
           simpl.
-          rewrite prev.
           split; auto.
+          rewrite prevH'.
           split; auto.
-          split; auto.
-          rewrite H4; auto.
         }
       }
       {
@@ -1879,6 +1882,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         intros venv cont act.
         unfold build_venv_fail.
         case st_ongoing as [st_addr st_ongoing].
+        case st_ongoing as [st_storage st_ongoing].
         case st_ongoing as [ve veH].
         case veH as [st_ongoing ve_sfx].
         case ve_sfx as [ve_sfx ve_str].
@@ -1920,7 +1924,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           split.
           {
             simpl.
-            (* need to strengthen the conditions *)
+            (* TODO! need to strengthen the conditions *)
             admit.
           }
           split; auto.
