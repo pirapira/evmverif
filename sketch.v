@@ -1466,10 +1466,10 @@ Module ExamplesOnConcreteWord.
     CALL ::
     ISZERO ::
     PUSH1 (word_of_N 0) ::
-    JUMPI ::
-    PUSH1 (word_of_N 0) ::
     PUSH1 (word_of_N 0) ::
     SSTORE ::
+    PUSH1 (word_of_N 0) ::
+    JUMPI ::
     STOP ::
     nil.
 
@@ -1487,10 +1487,14 @@ Module ExamplesOnConcreteWord.
       st.(account_address) = example2_address /\
       exists ve, (st.(account_ongoing_calls) = ve :: nil /\
              ve.(venv_prg_sfx) =
-             ISZERO ::
-               PUSH1 0%Z :: JUMPI
-                     :: PUSH1 0%Z
-                        :: PUSH1 0%Z :: SSTORE :: STOP :: nil
+    ISZERO ::
+    PUSH1 (word_of_N 0) ::
+    PUSH1 (word_of_N 0) ::
+    SSTORE ::
+    PUSH1 (word_of_N 0) ::
+    JUMPI ::
+    STOP ::
+    nil
                   /\
                   is_true (ST.equal word_eq (storage_store 0%Z 0%Z ve.(venv_storage)) empty_storage))
      )
