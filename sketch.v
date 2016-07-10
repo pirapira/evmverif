@@ -367,6 +367,12 @@ Record variable_env :=
   ; venv_value_sent : word
   (* TODO: add the sequence of executed instructions.
      would be useful for calculating the gas *)
+
+  (* These are necessary when throwing. *)
+  ; venv_storage_at_call : storage
+  ; venv_balance_at_call : address -> word
+
+  (* TODO: use venv_balance_at_call somewhere *)
   }.
 
 (* [update_balance adr v original] is similar to [original] except
@@ -392,6 +398,8 @@ Definition init_variable_env (s : storage) (bal : address -> word)
     venv_balance := bal ;
     venv_caller := caller ;
     venv_value_sent := value ;
+    venv_storage_at_call := s ;
+    venv_balance_at_call := bal ;
   |}.
 
 
@@ -419,7 +427,9 @@ Definition venv_update_stack (new_stack : list word) (v : variable_env) :=
     venv_prg_sfx := v.(venv_prg_sfx) ;
     venv_balance := v.(venv_balance) ;
     venv_caller := v.(venv_caller) ;
-    venv_value_sent := v.(venv_value_sent)
+    venv_value_sent := v.(venv_value_sent) ;
+    venv_storage_at_call := v.(venv_storage_at_call) ;
+    venv_balance_at_call := v.(venv_balance_at_call)
   |}.
 
 Arguments venv_update_stack new_stack v /.
@@ -432,7 +442,9 @@ Definition venv_advance_pc (v : variable_env) :=
     venv_prg_sfx := drop_one_element v.(venv_prg_sfx) ;
     venv_balance := v.(venv_balance) ;
     venv_caller := v.(venv_caller) ;
-    venv_value_sent := v.(venv_value_sent)
+    venv_value_sent := v.(venv_value_sent) ;
+    venv_storage_at_call := v.(venv_storage_at_call) ;
+    venv_balance_at_call := v.(venv_balance_at_call)
   |}.
 
 Arguments venv_advance_pc v /.
@@ -464,6 +476,8 @@ Definition venv_change_sfx (pos : N) (v : variable_env)
     venv_balance := v.(venv_balance);
     venv_caller := v.(venv_caller);
     venv_value_sent := v.(venv_value_sent);
+    venv_storage_at_call := v.(venv_storage_at_call) ;
+    venv_balance_at_call := v.(venv_balance_at_call)
   |}.
 
 Arguments venv_change_sfx pos v c /.
@@ -481,6 +495,8 @@ Definition venv_update_storage (addr : word) (val : word) (v : variable_env)
     venv_balance := v.(venv_balance);
     venv_caller := v.(venv_caller);
     venv_value_sent := v.(venv_value_sent);
+    venv_storage_at_call := v.(venv_storage_at_call) ;
+    venv_balance_at_call := v.(venv_balance_at_call)
   |}.
 
 Definition venv_first_instruction (v : variable_env) : option instruction :=
@@ -599,7 +615,9 @@ Definition call (v : variable_env) (c : constant_env) : instruction_result :=
              (update_balance c.(cenv_this)
                 (word_sub (v.(venv_balance) (c.(cenv_this))) e3) v.(venv_balance)));
            venv_caller := v.(venv_caller);
-           venv_value_sent := v.(venv_value_sent)
+           venv_value_sent := v.(venv_value_sent) ;
+           venv_storage_at_call := v.(venv_storage_at_call) ;
+           venv_balance_at_call := v.(venv_balance_at_call)
          |}
       )
   | _ =>
@@ -653,7 +671,8 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
 
 Inductive program_result :=
 | ProgramStepRunOut : program_result
-| ProgramToWorld : contract_action -> storage (* updated storage *) ->
+| ProgramToWorld : contract_action ->
+                   storage (* updated storage *) ->
                    (address -> word) (* updated balance *) ->
                    option variable_env (* to be pushed in the call stack *) -> program_result.
 
@@ -664,13 +683,16 @@ Fixpoint program_sem (v : variable_env) (c :constant_env) (steps : nat)
     | O => ProgramStepRunOut
     | S remaining_steps =>
       match v.(venv_prg_sfx) with
-      | nil => ProgramToWorld ContractFail v.(venv_storage) v.(venv_balance) None
+      | nil => ProgramToWorld ContractFail v.(venv_storage_at_call) v.(venv_balance_at_call) None
       | i :: _ =>
         match instruction_sem v c i with
         | InstructionContinue new_v =>
           program_sem new_v c remaining_steps
+        | InstructionToWorld ContractFail opt_pushed_v =>
+          ProgramToWorld ContractFail v.(venv_storage_at_call) v.(venv_balance_at_call) opt_pushed_v
         | InstructionToWorld a opt_pushed_v =>
           ProgramToWorld a v.(venv_storage) v.(venv_balance) opt_pushed_v
+        (* TODO: change the balance when suicide *)
         end
       end
   end.
@@ -705,7 +727,9 @@ Definition build_venv_called (a : account_state) (env : call_env) :
       venv_storage := a.(account_storage) ;
       venv_balance := env.(callenv_balance) ;
       venv_caller := env.(callenv_caller) ;
-      venv_value_sent := env.(callenv_value)
+      venv_value_sent := env.(callenv_value) ;
+      venv_storage_at_call := a.(account_storage) ;
+      venv_balance_at_call := env.(callenv_balance)
    |}.
 
 Arguments build_venv_called a env /.
@@ -752,11 +776,7 @@ Definition account_state_pop_ongoing_call (orig : account_state) :=
 Definition update_account_state (prev : account_state) (act: contract_action)
            (st : storage) (bal : address -> word)
            (v_opt : option variable_env) : account_state :=
-(* TODO: in case of suicide, move the balance to the caller *)
-  match act with
-    | ContractFail => prev
-    | _ =>
-      account_state_update_storage st
+  account_state_update_storage st
         match v_opt with
         | None =>
           prev
@@ -767,8 +787,7 @@ Definition update_account_state (prev : account_state) (act: contract_action)
             account_code := prev.(account_code) ;
             account_ongoing_calls := pushed :: prev.(account_ongoing_calls)
           |}
-        end
-  end.
+        end.
 
 (* [program_result_approximate a b] holds when
    a is identical to b or a still needs more steps *)
@@ -1914,7 +1933,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           right.
           f_equal.
         }
-        {
+        { (* update_account_state with contract_fail  *)
           simpl.
           apply example2_spec_impl_match.
           unfold example2_depth_n_state.
@@ -1924,7 +1943,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           split.
           {
             simpl.
-            (* TODO! need to strengthen the conditions *)
+            (* TODO! need to revert to the storage when called *)
             admit.
           }
           split; auto.
