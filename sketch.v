@@ -718,7 +718,8 @@ Definition build_cenv (a : account_state) :
    |}.
 
 
-(* TODO: balance should be updated. *)
+(* TODO: update the storage according to a *)
+(* TODO: udpate the balance according to return_result *)
 Definition build_venv_returned
   (a : account_state) (r : return_result) : option variable_env :=
   match a.(account_ongoing_calls) with
@@ -730,7 +731,7 @@ Definition build_venv_returned
 
 Arguments build_venv_returned a r /.
 
-(* TODO: balance should be updated *)
+(* Since the callee failed, the balance should not be updated. *)
 Definition build_venv_fail
            (a : account_state) : option variable_env :=
   match a.(account_ongoing_calls) with
@@ -751,20 +752,23 @@ Definition account_state_pop_ongoing_call (orig : account_state) :=
 Definition update_account_state (prev : account_state) (act: contract_action)
            (st : storage) (bal : address -> word)
            (v_opt : option variable_env) : account_state :=
-(* TODO: in case of fail, do not update *)
 (* TODO: in case of suicide, move the balance to the caller *)
-  account_state_update_storage st
-      match v_opt with
-      | None =>
-        prev
-      | Some pushed =>
-        {|
-          account_address := prev.(account_address) ;
-          account_storage := pushed.(venv_storage) ;
-          account_code := prev.(account_code) ;
-          account_ongoing_calls := pushed :: prev.(account_ongoing_calls)
-        |}
-      end.
+  match act with
+    | ContractFail => prev
+    | _ =>
+      account_state_update_storage st
+        match v_opt with
+        | None =>
+          prev
+        | Some pushed =>
+          {|
+            account_address := prev.(account_address) ;
+            account_storage := pushed.(venv_storage) ;
+            account_code := prev.(account_code) ;
+            account_ongoing_calls := pushed :: prev.(account_ongoing_calls)
+          |}
+        end
+  end.
 
 (* [program_result_approximate a b] holds when
    a is identical to b or a still needs more steps *)
@@ -1913,7 +1917,12 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           left.
           split; auto.
           split; auto.
-          split; auto.
+          split.
+          {
+            simpl.
+            (* need to strengthen the conditions *)
+            admit.
+          }
           split; auto.
           simpl.
           rewrite st_ongoing.
@@ -1921,6 +1930,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         }
       }
     }
-  Qed.
+  Admitted.
 
 End ExamplesOnConcreteWord.
