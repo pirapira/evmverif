@@ -149,6 +149,8 @@ Export W.
 Definition bool_to_word (b : bool) :=
   if b then word_one else word_zero.
 
+Arguments bool_to_word b /.
+
 Open Scope list_scope.
 
 Definition drop_one_element {A : Type} (lst : list A) :=
@@ -573,6 +575,8 @@ Definition jump (v : variable_env) (c : constant_env) : instruction_result :=
     end
   end.
 
+Arguments jump v c /.
+
 Definition jumpi (v : variable_env) (c : constant_env) : instruction_result :=
   match v.(venv_stack) with
   | pos :: cond :: rest =>
@@ -582,6 +586,8 @@ Definition jumpi (v : variable_env) (c : constant_env) : instruction_result :=
       jump (venv_pop_stack 1 v) c (* this has to change when gas is considered *)
   | _ => instruction_failure_result
   end.
+
+Arguments jumpi v c /.
 
 
 Axiom datasize : variable_env -> word.
@@ -1937,12 +1943,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           rewrite ve_sfx.
           repeat (case s as [| s]; [ solve [left; auto] | ]).
           simpl.
-          unfold bool_to_word.
           unfold compose.
-          simpl.
-          unfold jumpi.
-          simpl.
-          unfold jump.
           simpl.
           rewrite st_code.
           simpl.
