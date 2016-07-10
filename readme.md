@@ -26,7 +26,7 @@ The contract responds to all of these by
 * calling other accounts.
 
 Moreover, when the contract responds, the contract should again be ready
-to respond any entrance.  The contract should be ready for infinite number
+to respond to any entrance.  The contract should be ready for infinite number
 of interactions (until it executes `SUICIDE`).
 
 This idea is coinductively captured in `responce_to_world` type.
