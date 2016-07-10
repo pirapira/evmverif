@@ -789,12 +789,12 @@ Definition respond_to_call_correctly c a account_state_responds_to_world :=
 Definition respond_to_return_correctly (r : return_result -> contract_behavior)
            (a : account_state)
            (account_state_responds_to_world : account_state -> responce_to_world -> Prop) :=
-  forall (rr : return_result) venv cenv continuation act,
+  forall (rr : return_result) venv continuation act,
      Some venv = build_venv_returned a rr ->
      r rr = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
      (forall steps,
-         program_result_approximate (program_sem venv cenv steps)
+         program_result_approximate (program_sem venv (build_cenv a) steps)
                                     (ProgramToWorld act st bal pushed_venv))
      /\
     account_state_responds_to_world
@@ -804,12 +804,12 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
 Definition respond_to_fail_correctly (f : contract_behavior)
            (a : account_state)
            (account_state_responds_to_world : account_state -> responce_to_world -> Prop) :=
-  forall venv cenv continuation act,
+  forall venv continuation act,
      Some venv = build_venv_fail a ->
      f = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
      (forall steps,
-         program_result_approximate (program_sem venv cenv steps)
+         program_result_approximate (program_sem venv (build_cenv a) steps)
                                     (ProgramToWorld act st bal pushed_venv))
      /\
     account_state_responds_to_world
@@ -990,7 +990,7 @@ Section Example0Continue.
     }
     {
       unfold respond_to_return_correctly.
-      intros rr venv cenv continuation act.
+      intros rr venv continuation act.
       unfold example0_account_state.
       unfold build_venv_returned.
       simpl.
@@ -998,7 +998,7 @@ Section Example0Continue.
     }
     {
       unfold respond_to_fail_correctly.
-      intros venv cenv continuation act.
+      intros venv continuation act.
       unfold example0_account_state.
       unfold build_venv_fail.
       simpl.
@@ -1107,12 +1107,12 @@ Section Example1Continue.
       }
     }
     {
-      intros ? ? ? ? ?.
+      intros ? ? ? ?.
       simpl.
       congruence.
     }
     {
-      intros ? ? ? ?.
+      intros ? ? ?.
       simpl.
       congruence.
     }
@@ -1763,13 +1763,13 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       }
       {
         unfold respond_to_return_correctly.
-        intros ? ? ? ? ?.
+        intros ? ? ? ?.
         unfold build_venv_returned.
         rewrite nst4.
         congruence.
       }
       {
-        intros ? ? ? ?.
+        intros ? ? ?.
         simpl.
         rewrite nst4.
         congruence.
@@ -1819,7 +1819,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       }
       { (* return *)
         unfold respond_to_return_correctly.
-        intros rr venv cenv cont act.
+        intros rr venv cont act.
         unfold build_venv_returned.
         elim st_ongoing.
         intros prev prevH.
@@ -1868,10 +1868,42 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       }
       {
         unfold respond_to_fail_correctly.
-        intros venv cenv cont act.
+        intros venv cont act.
         unfold build_venv_fail.
-        (* need a definition of build_venv_fail *)
-        admit.
+        case st_ongoing as [st_addr st_ongoing].
+        case st_ongoing as [ve veH].
+        case veH as [st_ongoing ve_sfx].
+        case ve_sfx as [ve_sfx ve_str].
+        rewrite st_ongoing.
+        intro venvH.
+        inversion venvH; subst.
+        clear venvH.
+        intro act_cont_H.
+        inversion act_cont_H; subst.
+        clear act_cont_H.
+        eexists.
+        eexists.
+        eexists.
+        split.
+        {
+          intro s.
+          rewrite ve_sfx.
+          repeat (case s as [| s]; [ solve [left; auto] | ]).
+          simpl.
+          unfold bool_to_word.
+          unfold compose.
+          simpl.
+          unfold jumpi.
+          simpl.
+          unfold jump.
+          simpl.
+          (* need information about cenv program *)
+          admit.
+        }
+        {
+          (* wait till above *)
+          admit.
+        }
       }
     }
   Admitted.
