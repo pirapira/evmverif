@@ -748,11 +748,11 @@ Definition account_state_pop_ongoing_call (orig : account_state) :=
      account_ongoing_calls := tail (orig.(account_ongoing_calls))
   |}.
 
-(* Axiom update_account_state : account_state -> option variable_env -> account_state. *)
-
-Definition update_account_state (prev : account_state) (st : storage) (bal : address -> word)
+Definition update_account_state (prev : account_state) (act: contract_action)
+           (st : storage) (bal : address -> word)
            (v_opt : option variable_env) : account_state :=
-
+(* TODO: in case of fail, do not update *)
+(* TODO: in case of suicide, move the balance to the caller *)
   account_state_update_storage st
       match v_opt with
       | None =>
@@ -783,7 +783,7 @@ Definition respond_to_call_correctly c a account_state_responds_to_world :=
                           (build_cenv a) steps)
              (ProgramToWorld act st bal pushed_venv)) /\
               account_state_responds_to_world
-                (account_state_update_storage st (update_account_state a st bal pushed_venv))
+                (account_state_update_storage st (update_account_state a act st bal pushed_venv))
                                           continuation).
 
 Definition respond_to_return_correctly (r : return_result -> contract_behavior)
@@ -798,7 +798,7 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
                                     (ProgramToWorld act st bal pushed_venv))
      /\
     account_state_responds_to_world
-      (update_account_state (account_state_pop_ongoing_call a) st bal pushed_venv)
+      (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
                                     continuation.
 
 Definition respond_to_fail_correctly (f : contract_behavior)
@@ -813,7 +813,7 @@ Definition respond_to_fail_correctly (f : contract_behavior)
                                     (ProgramToWorld act st bal pushed_venv))
      /\
     account_state_responds_to_world
-      (update_account_state (account_state_pop_ongoing_call a) st bal pushed_venv)
+      (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
                                     continuation.
 
 
