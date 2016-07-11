@@ -1,5 +1,4 @@
 *~
-.sketch.aux
-.word.aux
+*.aux
 *.glob
 *.vo
