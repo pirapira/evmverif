@@ -215,7 +215,7 @@ Inductive contract_action :=
    *)
 
 
-(* An element of type [responce_to_world] describes a strategy of a contract
+(* An element of type [response_to_world] describes a strategy of a contract
    that can respond when
    1. it is called from the world
    2. it receives a callee return from the world
@@ -223,12 +223,12 @@ Inductive contract_action :=
    Initially, when the contract has not called any other accounts,
    the points 2. and 3. are useless.
  *)
-CoInductive responce_to_world :=
+CoInductive response_to_world :=
 | Respond :
     (call_env -> contract_behavior) (* what to do if called / or re-entered *) ->
     (return_result -> contract_behavior) (* what to do if the callee returns (if exists) *) ->
     (contract_behavior) (* what to do if the callee's execution fails *) ->
-    responce_to_world
+    response_to_world
 
 
 (* An element of type [contract_behavior] describes a behavior of an
@@ -240,7 +240,7 @@ CoInductive responce_to_world :=
    4. calling some account
  *)
 with contract_behavior :=
-| ContractAction : contract_action -> responce_to_world -> contract_behavior
+| ContractAction : contract_action -> response_to_world -> contract_behavior
 .
 
 
@@ -283,7 +283,7 @@ Definition history := list action.
 
 (******** World and the contract interact to produce a history ****)
 
-Fixpoint specification_run (w : world) (r : responce_to_world) : history :=
+Fixpoint specification_run (w : world) (r : response_to_world) : history :=
   match w, r with
   | nil, _ => nil
   | WorldCall call :: world_cont, Respond f _ _ =>
@@ -818,7 +818,7 @@ Definition respond_to_call_correctly c a account_state_responds_to_world :=
 
 Definition respond_to_return_correctly (r : return_result -> contract_behavior)
            (a : account_state)
-           (account_state_responds_to_world : account_state -> responce_to_world -> Prop) :=
+           (account_state_responds_to_world : account_state -> response_to_world -> Prop) :=
   forall (rr : return_result) venv continuation act,
      Some venv = build_venv_returned a rr ->
      r rr = ContractAction act continuation ->
@@ -833,7 +833,7 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
 
 Definition respond_to_fail_correctly (f : contract_behavior)
            (a : account_state)
-           (account_state_responds_to_world : account_state -> responce_to_world -> Prop) :=
+           (account_state_responds_to_world : account_state -> response_to_world -> Prop) :=
   forall venv continuation act,
      Some venv = build_venv_fail a ->
      f = ContractAction act continuation ->
@@ -849,7 +849,7 @@ Definition respond_to_fail_correctly (f : contract_behavior)
 
 
 CoInductive account_state_responds_to_world :
-  account_state -> responce_to_world -> Prop :=
+  account_state -> response_to_world -> Prop :=
 | AccountStep :
     forall (a : account_state)
            (c : call_env -> contract_behavior)
@@ -942,7 +942,7 @@ End Example3.
 
 Section Example0Continue.
 
-  Definition spec_example_0 : responce_to_world :=
+  Definition spec_example_0 : response_to_world :=
     Respond
       (fun _ => always_fail)
       (fun _ => always_fail)
@@ -1046,7 +1046,7 @@ Section Example1Continue.
   Definition action_example_1 :=
     always_return return_result_nil.
 
-  Definition spec_example_1 : responce_to_world :=
+  Definition spec_example_1 : response_to_world :=
     Respond
       (fun _ => action_example_1)
       (fun _ => action_example_1)
@@ -1571,6 +1571,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
               (call_but_fail_on_reentrance word_one))
       (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance word_zero))
       (ContractAction ContractFail (call_but_fail_on_reentrance word_zero)).
+  Proof.
   Admitted.
 
   Lemma call_but_fail_on_reentrace_1_eq :
@@ -1581,7 +1582,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       (ContractAction ContractFail (call_but_fail_on_reentrance word_zero)).
   Admitted.
 
-  Definition example2_spec (depth: word) : responce_to_world :=
+  Definition example2_spec (depth: word) : response_to_world :=
     call_but_fail_on_reentrance depth.
 
   Lemma update_remove_eq :
