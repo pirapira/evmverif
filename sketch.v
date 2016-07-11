@@ -1256,12 +1256,15 @@ Module ConcreteWord <: Word.
       reflexivity. }
     split.
     {
-      admit.
+      apply N2Z.is_nonneg.
     }
     {
-      admit.
+      eapply Z.lt_trans.
+      { apply N2Z.inj_lt.
+        eassumption. }
+      vm_compute; auto.
     }
-  Admitted.
+  Qed.
 
 
   Module WordOrdered <: OrderedType.
