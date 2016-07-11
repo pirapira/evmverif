@@ -251,11 +251,22 @@ with contract_behavior :=
 Definition contract_action_expander (ca : contract_behavior) :=
   match ca with ContractAction a b => ContractAction a b end.
 
+Definition response_expander (r : response_to_world) :=
+  match r with Respond f g h => Respond f g h end.
+
 Lemma contract_action_expander_eq :
   forall ca, contract_action_expander ca = ca.
 Proof.
   intro ca.
   case ca.
+  auto.
+Qed.
+
+Lemma response_expander_eq :
+  forall r, r = response_expander r.
+Proof.
+  intro r.
+  case r.
   auto.
 Qed.
 
@@ -1572,7 +1583,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance word_zero))
       (ContractAction ContractFail (call_but_fail_on_reentrance word_zero)).
   Proof.
-  Admitted.
+    rewrite (response_expander_eq (call_but_fail_on_reentrance 0%Z)).
+    auto.
+  Qed.
 
   Lemma call_but_fail_on_reentrace_1_eq :
     call_but_fail_on_reentrance 1%Z =
@@ -1580,7 +1593,10 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance word_one))
       (fun retval => ContractAction (ContractReturn nil) (call_but_fail_on_reentrance word_zero))
       (ContractAction ContractFail (call_but_fail_on_reentrance word_zero)).
-  Admitted.
+  Proof.
+    rewrite (response_expander_eq (call_but_fail_on_reentrance 1%Z)).
+    auto.
+  Qed.
 
   Definition example2_spec (depth: word) : response_to_world :=
     call_but_fail_on_reentrance depth.
