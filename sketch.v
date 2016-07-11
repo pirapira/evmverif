@@ -136,6 +136,7 @@ Module Type Word.
   Arguments storage_load idx s /.
 
   Parameter storage_store : word (* idx *) -> word (* value *) -> storage -> storage.
+  Arguments storage_store idx v orig /.
 
   Parameter empty_storage : storage.
   Parameter empty_storage_empty : forall idx : word,
@@ -1330,7 +1331,6 @@ Module ConcreteWord <: Word.
         rewrite !ZModulo.spec_compare.
         case_eq (ZModulo.to_Z ALEN.p x ?= ZModulo.to_Z ALEN.p y)%Z; try congruence.
         case_eq (ZModulo.to_Z ALEN.p y ?= ZModulo.to_Z ALEN.p z)%Z; try congruence.
-        Search _ (_ ?= _)%Z.
         intros H I _ _.
         erewrite (Zcompare_Lt_trans); auto; eassumption.
       Qed.
@@ -1619,7 +1619,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     split.
     {
       intro k.
-      Search ST.Raw.PX.In.
       unfold storage_store.
       simpl.
       split.
@@ -1637,10 +1636,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           intro neq.
           unfold ST.Raw.PX.In in H.
           case H as [e H].
-          Search _ ST.Raw.PX.MapsTo.
           apply ST.Raw.remove_3 in H.
           {
-            Search _ ST.Raw.PX.MapsTo.
             apply ST.Raw.add_3 in H.
             {
               apply ST.equal_2 in nst2.
@@ -1650,7 +1647,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
               intro I'.
               case I' as [I0 _].
               simpl in I0.
-              Search _ ST.Raw.empty.
               case I0.
               {
                 exists e.
@@ -1669,7 +1665,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             }
           }
           {
-            Search Sorted.
             apply ST.Raw.add_sorted.
             apply ST.sorted.
           }
@@ -1737,9 +1732,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             case_eq (ST.find (elt:=word) idx (account_storage st)); auto.
             intros w H.
             apply ST.find_2 in H.
-            Search _ ST.MapsTo.
             apply False_ind.
-            Search _ ST.In.
             assert (ST.Raw.PX.In idx (ST.this (account_storage st))) as K.
             {
               unfold ST.Raw.PX.In.
@@ -1775,7 +1768,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             }
             case_eq (ZModulo.to_Z ALEN.p (callenv_balance ce (account_address st))
       ?= ZModulo.to_Z ALEN.p 0)%Z; try congruence.
-            Search (_ ?= _)%Z.
             rewrite Z.compare_nge_iff.
             intro H'.
             apply False_ind.
@@ -1794,15 +1786,10 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           rewrite <- contract_action_expander_eq in next at 1.
           inversion next; subst.
           simpl.
-          unfold storage_load.
-          unfold storage_store.
-          unfold empty_storage.
-          simpl.
           apply example2_spec_impl_match.
           unfold example2_depth_n_state.
           right.
           split; auto.
-          simpl.
           split; auto.
           split.
           {
@@ -1822,17 +1809,13 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           split.
           {
             rewrite nst4.
-            eauto.
+            intuition.
           }
           {
             split; auto.
             split; auto.
-            simpl.
-
-
             apply update_remove_eq.
             assumption.
-
           }
 
        (* this place should be come harder and harder as I specify the
@@ -1843,7 +1826,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       {
         unfold respond_to_return_correctly.
         intros ? ? ? ?.
-        unfold build_venv_returned.
+        simpl.
         rewrite nst4.
         congruence.
       }
@@ -1876,14 +1859,11 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         {
           intro s.
           repeat (case s as [| s]; [ solve [left; auto] | ]).
-          simpl.
-          unfold jumpi.
-          simpl.
-          rewrite st_load.
-          simpl.
-          unfold jump.
+
           simpl.
           unfold venv_first_instruction.
+          rewrite st_load.
+          simpl.
           rewrite st_code.
           simpl.
           right.
@@ -1892,8 +1872,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         {
           apply example2_spec_impl_match.
           unfold example2_depth_n_state.
-          right.
-          split; auto.
+          intuition.
         }
       }
       { (* return *)
