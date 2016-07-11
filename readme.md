@@ -9,7 +9,7 @@ This repository contains
 All development is currently in [Coq](https://coq.inria.fr/).
 With Coq 8.5pl1,
 ```
-coqc sketch.v
+make
 ```
 should type-check the definitions and the proofs.
 
