@@ -790,6 +790,8 @@ Definition account_state_pop_ongoing_call (orig : account_state) :=
      account_ongoing_calls := tail (orig.(account_ongoing_calls))
   |}.
 
+Arguments account_state_pop_ongoing_call orig /.
+
 (* TODO: use venv widely and remove other arguments *)
 Definition update_account_state (prev : account_state) (act: contract_action)
            (st : storage) (bal : address -> word)
@@ -1897,13 +1899,13 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       { (* return *)
         unfold respond_to_return_correctly.
         intros rr venv cont act.
-        unfold build_venv_returned.
         elim st_ongoing.
         intros prev prevH.
         case prevH as [st_str prevH].
         case prevH as [prevH prevH'].
         case prevH' as [prevH' prevH''].
         case prevH'' as [prevH'' prevH'''].
+        simpl.
         rewrite prevH'.
         intro H.
         inversion H; subst.
@@ -1928,25 +1930,18 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           apply example2_spec_impl_match.
           unfold example2_depth_n_state.
           left.
-          split; auto.
-          unfold update_account_state.
-          unfold account_state_pop_ongoing_call.
-          simpl.
-          split; auto.
-          rewrite prevH'.
-          split; auto.
-          tauto.
+          repeat (split; auto); tauto.
         }
       }
       {
         unfold respond_to_fail_correctly.
         intros venv cont act.
-        unfold build_venv_fail.
         case st_ongoing as [st_addr st_ongoing].
         case st_ongoing as [st_storage st_ongoing].
         case st_ongoing as [ve veH].
         case veH as [st_ongoing ve_sfx].
         case ve_sfx as [ve_sfx ve_str].
+        simpl.
         rewrite st_ongoing.
         intro venvH.
         inversion venvH; subst.
@@ -1964,7 +1959,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           repeat (case s as [| s]; [ solve [left; auto] | ]).
           simpl.
           unfold compose.
-          simpl.
           rewrite st_code.
           simpl.
           right.
@@ -1975,13 +1969,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           apply example2_spec_impl_match.
           unfold example2_depth_n_state.
           left.
-          split; auto.
-          split; auto.
-          split; [ solve [simpl; tauto] | ].
-          split; auto.
-          simpl.
-          rewrite st_ongoing.
-          auto.
+          repeat split; auto; tauto.
         }
       }
     }
