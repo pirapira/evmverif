@@ -1127,4 +1127,69 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     }
   Qed.
 
+  (** Example 4: a contract that keeps track of the accumulated income and spending.
+   *
+   * storage[0]: owner
+   * storage[1]: income so far
+   * storage[2]: spending so far
+   * income so far - spending so far should coincide with the balance.
+   *
+   * data length 0 => receive eth; storage[1] should be incremented
+   *
+   * data length > 0 => not receiving eth
+   * if msg.sender <> owner, abort.
+   * data[0-19] is the address of recipient.
+   * data[32-63] is the amount of spending.
+   *
+   * no particular prevention of re-entrancy.
+   *)
+
+  Definition failing_action cont : contract_behavior :=
+    ContractAction ContractFail cont.
+
+  Definition receive_eth cont : contract_behavior :=
+    ContractAction (ContractReturn nil) cont.
+
+  Axiom list_slice : N -> N -> list byte -> word.
+
+  Definition sending_action recipient value cont : contract_behavior :=
+    ContractAction (ContractCall
+                      {|
+                        callarg_gaslimit := 30000%Z;
+                        callarg_code := recipient;
+                        callarg_recipient := recipient;
+                        callarg_value := value;
+                        callarg_data := nil;
+                        callarg_output_begin := 0%Z;
+                        callarg_output_size := 0%Z
+                      |}) cont.
+
+  Search _ (nat -> nat -> bool).
+
+  CoFixpoint counter_wallet (income_sofar : word) (spending_sofar : word)
+    : response_to_world :=
+    Respond
+      (fun cenv =>
+         match cenv.(callenv_data) with
+         | nil => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar)
+         | _ =>
+           if word_eq word_zero (cenv.(callenv_value)) then
+             if Nat.leb 64 (List.length cenv.(callenv_data)) then
+               let addr := list_slice 0 20 cenv.(callenv_data) in
+               let value := list_slice 32 32 cenv.(callenv_data) in
+               sending_action addr value (counter_wallet income_sofar (word_add spending_sofar value))
+             else
+               failing_action (counter_wallet income_sofar spending_sofar)
+           else
+             failing_action (counter_wallet income_sofar spending_sofar)
+         end
+      )
+      (fun returned =>
+         (* todo change *)
+         failing_action (counter_wallet income_sofar spending_sofar)
+      )
+      (
+        failing_action (counter_wallet income_sofar spending_sofar)
+      ).
+
 End ExamplesOnConcreteWord.

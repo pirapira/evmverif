@@ -461,6 +461,7 @@ Arguments jumpi v c /.
 
 Axiom datasize : variable_env -> word.
 
+(* TODO: this should fail for various reasons.  lack of balance. *)
 Definition call (v : variable_env) (c : constant_env) : instruction_result :=
   match v.(venv_stack) with
   | e0 :: e1 :: e2 :: e3 :: e4 :: e5 :: e6 :: rest =>
