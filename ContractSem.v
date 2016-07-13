@@ -675,10 +675,11 @@ Definition program_result_approximate (a : program_result) (b : program_result)
   a = ProgramStepRunOut \/ a = b
   (* TODO: this [a = b] has to be weakened up to 2^256 in many places *).
 
-Definition respond_to_call_correctly c a account_state_responds_to_world :=
+Definition respond_to_call_correctly c a I account_state_responds_to_world :=
       (forall (callenv : call_env)
           act continuation,
-          c callenv = ContractAction act continuation ->
+          I (build_venv_called a callenv) /\
+          (c callenv = ContractAction act continuation ->
           exists pushed_venv, exists st, exists bal,
             (forall steps, program_result_approximate
              (program_sem (build_venv_called a callenv)
@@ -686,14 +687,15 @@ Definition respond_to_call_correctly c a account_state_responds_to_world :=
              (ProgramToWorld act st bal pushed_venv)) /\
               account_state_responds_to_world
                 (account_state_update_storage st (update_account_state a act st bal pushed_venv))
-                                          continuation).
+                                          continuation I)).
 
 Definition respond_to_return_correctly (r : return_result -> contract_behavior)
-           (a : account_state)
-           (account_state_responds_to_world : account_state -> response_to_world -> Prop) :=
+           (a : account_state) I
+           (account_state_responds_to_world : account_state -> response_to_world -> (variable_env -> Prop (*invariant*)) -> Prop) :=
   forall (rr : return_result) venv continuation act,
      Some venv = build_venv_returned a rr ->
-     r rr = ContractAction act continuation ->
+     I venv /\
+     (r rr = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
      (forall steps,
          program_result_approximate (program_sem venv (build_cenv a) steps)
@@ -701,14 +703,15 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
      /\
     account_state_responds_to_world
       (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
-                                    continuation.
+                                    continuation I).
 
 Definition respond_to_fail_correctly (f : contract_behavior)
-           (a : account_state)
-           (account_state_responds_to_world : account_state -> response_to_world -> Prop) :=
+           (a : account_state) (I : variable_env -> Prop)
+           (account_state_responds_to_world : account_state -> response_to_world -> (variable_env -> Prop (*invariant*)) -> Prop) :=
   forall venv continuation act,
      Some venv = build_venv_fail a ->
-     f = ContractAction act continuation ->
+     I venv /\
+     (f = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
      (forall steps,
          program_result_approximate (program_sem venv (build_cenv a) steps)
@@ -716,20 +719,22 @@ Definition respond_to_fail_correctly (f : contract_behavior)
      /\
     account_state_responds_to_world
       (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
-                                    continuation.
+                                    continuation I).
 
 
 
 CoInductive account_state_responds_to_world :
-  account_state -> response_to_world -> Prop :=
+  account_state -> response_to_world -> (variable_env -> Prop (*invariant*)) -> Prop :=
 | AccountStep :
     forall (a : account_state)
            (c : call_env -> contract_behavior)
-           (r : return_result -> contract_behavior) f,
-      respond_to_call_correctly c a account_state_responds_to_world ->
-      respond_to_return_correctly r a account_state_responds_to_world ->
-      respond_to_fail_correctly f a account_state_responds_to_world ->
-    account_state_responds_to_world a (Respond c r f)
+           (r : return_result -> contract_behavior)
+           (I : variable_env -> Prop)
+           f,
+      respond_to_call_correctly c a I account_state_responds_to_world ->
+      respond_to_return_correctly r a I account_state_responds_to_world ->
+      respond_to_fail_correctly f a I account_state_responds_to_world ->
+    account_state_responds_to_world a (Respond c r f) I
 .
 
 End Make.

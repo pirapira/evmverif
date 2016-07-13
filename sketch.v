@@ -174,12 +174,14 @@ Section Example0Continue.
 
   Theorem example0_spec_impl_match :
     account_state_responds_to_world
-      example0_account_state spec_example_0.
+      example0_account_state spec_example_0 (fun _ => True).
   Proof.
     cofix.
     apply AccountStep.
     {
-      intros ? ? ? ?.
+      intros ? ? ?.
+      split; [solve [auto] | ].
+      intros ?.
       always_fail_tac.
       eexists.
       eexists.
@@ -292,13 +294,14 @@ Section Example1Continue.
 
   Theorem example1_spec_impl_match :
     account_state_responds_to_world
-      example1_account_state spec_example_1.
+      example1_account_state spec_example_1 (fun _ => True).
   Proof.
     cofix.
     apply AccountStep.
     { (* call case *)
       unfold respond_to_call_correctly.
       intros.
+      split; [solve [auto] | ].
       eexists.
       eexists.
       eexists.
@@ -865,7 +868,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     forall st n,
           example2_depth_n_state n st ->
           account_state_responds_to_world
-            st (example2_spec n%Z).
+            st (example2_spec n%Z) (fun _ => True).
   Proof.
     cofix.
     intros st n n_state.
@@ -884,7 +887,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       apply AccountStep.
       {
         unfold respond_to_call_correctly.
-        intros ce a con next.
+        intros ce a con.
+        split; [ solve [auto] | ].
+        intro next.
         eexists.
         eexists.
         eexists.
@@ -1020,7 +1025,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       rewrite call_but_fail_on_reentrace_1_eq.
       apply AccountStep.
       { (* call *)
-        intros callenv act continuation H.
+        intros callenv act continuation.
+        split; [solve [auto] | ].
+        intro H.
         inversion H; subst.
         clear H.
         eexists.
@@ -1062,6 +1069,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         intro H.
         inversion H; subst.
         clear H.
+        split; [ solve [auto] | ].
         intros act_cont_eq.
         eexists.
         eexists.
@@ -1098,6 +1106,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         intro venvH.
         inversion venvH; subst.
         clear venvH.
+        split; [ solve [auto] | ].
         intro act_cont_H.
         inversion act_cont_H; subst.
         clear act_cont_H.
