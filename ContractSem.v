@@ -192,6 +192,8 @@ Inductive instruction :=
 | JUMPI
 | JUMPDEST
 | CALLDATASIZE
+| CALLDATALOAD
+| CALLVALUE
 | ADD
 | SUB
 | ISZERO
@@ -200,6 +202,8 @@ Inductive instruction :=
 | STOP
 | DUP1
 | POP
+| GASLIMIT
+| instr_GT
 .
 
 (**
@@ -460,6 +464,10 @@ Arguments jumpi v c /.
 
 
 Axiom datasize : variable_env -> word.
+Axiom cut_data : variable_env -> word -> word.
+
+(* currently this is not very true: to fix, add the sequence of executed instructions in venv. *)
+Axiom gas_limit : variable_env -> word.
 
 (* TODO: this should fail for various reasons.  lack of balance. *)
 Definition call (v : variable_env) (c : constant_env) : instruction_result :=
@@ -535,6 +543,8 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | JUMP => jump v c
   | JUMPDEST => stack_0_0_op v c
   | CALLDATASIZE => stack_0_1_op v c (datasize v)
+  | CALLDATALOAD => stack_1_1_op v c (cut_data v)
+  | CALLVALUE => stack_0_1_op v c v.(venv_value_sent)
   | ADD => stack_2_1_op v c word_add
   | SUB => stack_2_1_op v c word_sub
   | ISZERO => stack_1_1_op v c (compose bool_to_word word_iszero)
@@ -543,6 +553,8 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | STOP => stop v c
   | DUP1 => stack_1_2_op v c (fun a => (a, a))
   | POP => pop v c
+  | GASLIMIT => stack_0_1_op v c (gas_limit v)
+  | instr_GT => stack_2_1_op v c (fun a b => bool_to_word (word_smaller b a))
   end.
 
 Inductive program_result :=

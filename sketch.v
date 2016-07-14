@@ -1185,7 +1185,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
          | _ =>
            if word_eq word_zero (cenv.(callenv_value)) then
              if Nat.leb 64 (List.length cenv.(callenv_data)) then
-               let addr := list_slice 0 20 cenv.(callenv_data) in
+               let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
                sending_action addr value (counter_wallet income_sofar (word_add spending_sofar value))
              else
@@ -1200,5 +1200,56 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       (
         failing_action (counter_wallet income_sofar spending_sofar)
       ).
+
+  (* TODO: streamline this by allowing labels in JUMPDEST *)
+  Definition plus_size_label : word := 13%Z.
+  Definition return_success_label : word := 58%Z.
+
+  Definition counter_wallet_code : program :=
+    CALLDATASIZE ::
+      PUSH1 plus_size_label ::
+        JUMPI ::
+    (* size zero *)
+    CALLVALUE ::
+      PUSH1 word_zero (* storage[0] *) ::
+        SLOAD ::
+        ADD ::
+      PUSH1 word_zero ::
+        SSTORE ::
+    STOP ::
+    JUMPDEST (* plus_size_label *) ::
+    CALLVALUE ::
+        PUSH1 word_zero (* invalid destination *) ::
+    (**) JUMPI ::
+    (* call_value zero *)
+    CALLDATASIZE ::
+        PUSH1 (64%Z) ::
+    (**) instr_GT ::
+        PUSH1 (2%Z) ::
+    (**) JUMPI (* data too small *) ::
+    PUSH1 (0%Z) (* out size *) ::
+        PUSH1 (0%Z) (* out offset *) ::
+    (**) PUSH1 (0%Z) (* out size *) ::
+    (***) PUSH1 (0%Z) (* in offset *) ::
+    (****) PUSH1 (0%Z) (* in size *) ::
+    (*****) PUSH1 (0%Z) ::
+    (*****) CALLDATALOAD (* addr loaded *) ::
+    (*****) PUSH1 (32%Z) ::
+    (******) CALLDATALOAD (* value loaded *) ::
+    (******) DUP1 ::
+    (*******) PUSH1 (1%Z) ::
+    (********) SLOAD ::
+    (********) ADD ::
+    (*******) PUSH1 (1%Z) ::
+    (********) SSTORE ::
+    (******) GASLIMIT ::
+    (*******) CALL ::
+        PUSH1 return_success_label ::
+    (**) JUMPI ::
+    PUSH1 word_zero ::
+    JUMP ::
+    JUMPDEST (* return_success *) ::
+    STOP ::
+    nil.
 
 End ExamplesOnConcreteWord.
