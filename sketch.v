@@ -181,7 +181,7 @@ Section Example0Continue.
     {
       intros ? ? ?.
       split; [solve [auto] | ].
-      intros ?.
+      intros _ ?.
       always_fail_tac.
       eexists.
       eexists.
@@ -302,6 +302,7 @@ Section Example1Continue.
       unfold respond_to_call_correctly.
       intros.
       split; [solve [auto] | ].
+      intros _.
       eexists.
       eexists.
       eexists.
@@ -889,7 +890,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         unfold respond_to_call_correctly.
         intros ce a con.
         split; [ solve [auto] | ].
-        intro next.
+        intros _ next.
         eexists.
         eexists.
         eexists.
@@ -1027,7 +1028,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       { (* call *)
         intros callenv act continuation.
         split; [solve [auto] | ].
-        intro H.
+        intros _ H.
         inversion H; subst.
         clear H.
         eexists.
@@ -1070,7 +1071,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         inversion H; subst.
         clear H.
         split; [ solve [auto] | ].
-        intros act_cont_eq.
+        intros _ act_cont_eq.
         eexists.
         eexists.
         eexists.
@@ -1107,7 +1108,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         inversion venvH; subst.
         clear venvH.
         split; [ solve [auto] | ].
-        intro act_cont_H.
+        intros _ act_cont_H.
         inversion act_cont_H; subst.
         clear act_cont_H.
         eexists.
