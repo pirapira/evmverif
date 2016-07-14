@@ -1203,7 +1203,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
 
   (* TODO: streamline this by allowing labels in JUMPDEST *)
   Definition plus_size_label : word := 13%Z.
-  Definition return_success_label : word := 58%Z.
 
   Definition counter_wallet_code : program :=
     CALLDATASIZE ::
@@ -1219,36 +1218,34 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     STOP ::
     JUMPDEST (* plus_size_label *) ::
     CALLVALUE ::
-        PUSH1 word_zero (* invalid destination *) ::
+      PUSH1 word_zero (* invalid destination *) ::
     (**) JUMPI ::
     (* call_value zero *)
     CALLDATASIZE ::
-        PUSH1 (64%Z) ::
-    (**) instr_GT ::
-        PUSH1 (2%Z) ::
-    (**) JUMPI (* data too small *) ::
+      PUSH1 (64%Z) ::
+        instr_GT ::
+      PUSH1 (2%Z) ::
+        JUMPI (* data too small *) ::
     PUSH1 (0%Z) (* out size *) ::
-        PUSH1 (0%Z) (* out offset *) ::
-    (**) PUSH1 (0%Z) (* out size *) ::
-    (***) PUSH1 (0%Z) (* in offset *) ::
-    (****) PUSH1 (0%Z) (* in size *) ::
-    (*****) PUSH1 (0%Z) ::
-    (*****) CALLDATALOAD (* addr loaded *) ::
-    (*****) PUSH1 (32%Z) ::
-    (******) CALLDATALOAD (* value loaded *) ::
-    (******) DUP1 ::
-    (*******) PUSH1 (1%Z) ::
-    (********) SLOAD ::
-    (********) ADD ::
-    (*******) PUSH1 (1%Z) ::
-    (********) SSTORE ::
-    (******) GASLIMIT ::
-    (*******) CALL ::
-        PUSH1 return_success_label ::
-    (**) JUMPI ::
-    PUSH1 word_zero ::
-    JUMP ::
-    JUMPDEST (* return_success *) ::
+      PUSH1 (0%Z) (* out offset *) ::
+        PUSH1 (0%Z) (* out size *) ::
+          PUSH1 (0%Z) (* in offset *) ::
+            PUSH1 (0%Z) (* in size *) ::
+              PUSH1 (0%Z) ::
+              CALLDATALOAD (* addr loaded *) ::
+                PUSH1 (32%Z) ::
+                CALLDATALOAD (* value loaded *) ::
+                DUP1 ::
+                  PUSH1 (1%Z) ::
+                    SLOAD ::
+                    ADD ::
+                  PUSH1 (1%Z) ::
+                    SSTORE ::
+                GASLIMIT ::
+                  CALL ::
+      ISZERO ::
+      PUSH1 word_zero ::
+        JUMPI ::
     STOP ::
     nil.
 
