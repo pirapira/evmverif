@@ -393,8 +393,6 @@ Module ConcreteWord <: Word.
 
   Definition word := W.t.
 
-  Print W.ops.
-
   Definition word_eq (a : W.t) (b : W.t) :=
     match ZnZ.compare a b with Eq => true | _ => false end.
 
@@ -658,8 +656,6 @@ Module ConcreteWord <: Word.
     compute.
     auto.
   Qed.
-
-  Print Universes.
 
 End ConcreteWord.
 
@@ -1173,8 +1169,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                         callarg_output_begin := 0%Z;
                         callarg_output_size := 0%Z
                       |}) cont.
-
-  Search _ (nat -> nat -> bool).
 
   CoFixpoint counter_wallet (income_sofar : word) (spending_sofar : word)
     : response_to_world :=
