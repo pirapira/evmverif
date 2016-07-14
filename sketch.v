@@ -316,7 +316,7 @@ Section Example1Continue.
         intro.
         assert (Z : word_smaller word_zero (word_of_N 256) = true).
         {
-          rewrite word_of_zero.
+          unfold word_zero.
           rewrite smaller_word_of_N; compute; auto.
         }
         case steps as [|steps]; [left; auto | ].

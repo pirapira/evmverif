@@ -7,8 +7,6 @@ Module Type Word.
   Parameter word_eq : word -> word -> bool.
   Parameter word_add : word -> word -> word.
   Parameter word_sub : word -> word -> word.
-  Parameter word_one : word.
-  Parameter word_zero : word.
   Parameter word_iszero : word -> bool.
   (* TODO: state correctness of word_iszero *)
   Parameter word_smaller : word -> word -> bool.
@@ -21,11 +19,8 @@ Module Type Word.
   forall (n : N), n < 10000 -> N_of_word (word_of_N n) = n.
 
   (* TODO: turn these into definitions *)
-  Parameter word_of_zero :
-    word_zero = word_of_N 0.
-  Parameter word_of_one :
-    word_one = word_of_N 1.
-
+  Definition word_zero : word := word_of_N 0.
+  Definition word_one : word := word_of_N 1.
 
   Parameter byte : Type.
   Parameter address : Type.
