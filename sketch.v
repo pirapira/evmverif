@@ -1195,8 +1195,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
          end
       )
       (fun returned =>
-         (* todo change *)
-         failing_action (counter_wallet income_sofar spending_sofar)
+         ContractAction (ContractReturn nil) (counter_wallet income_sofar spending_sofar)
       )
       (
         failing_action (counter_wallet income_sofar spending_sofar)
