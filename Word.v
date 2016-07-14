@@ -20,6 +20,13 @@ Module Type Word.
     (* TODO: This 10000 is a bit arbitrary. *)
   forall (n : N), n < 10000 -> N_of_word (word_of_N n) = n.
 
+  (* TODO: turn these into definitions *)
+  Parameter word_of_zero :
+    word_zero = word_of_N 0.
+  Parameter word_of_one :
+    word_one = word_of_N 1.
+
+
   Parameter byte : Type.
   Parameter address : Type.
   Parameter address_of_word : word -> address.

@@ -175,6 +175,7 @@ Section Example0Continue.
 
   Search _ (N -> N -> bool).
 
+  (* should be moved to Word *)
   Axiom smaller_word_of_N :
     forall x y,
     x < 100000 ->
@@ -313,7 +314,11 @@ Section Example1Continue.
       split.
       {
         intro.
-          assert (Z : word_smaller word_zero (word_of_N 256) = true) by admit.
+        assert (Z : word_smaller word_zero (word_of_N 256) = true).
+        {
+          rewrite word_of_zero.
+          rewrite smaller_word_of_N; compute; auto.
+        }
         case steps as [|steps]; [left; auto | ].
         case steps as [|steps]; [left; auto | ].
         {
@@ -359,7 +364,7 @@ Section Example1Continue.
       simpl.
       congruence.
     }
-  Admitted.
+  Qed.
 
 End Example1Continue.
 
@@ -679,6 +684,16 @@ Module ConcreteWord <: Word.
     auto.
   Qed.
 
+  Lemma word_of_zero :
+    word_zero = word_of_N 0.
+  Proof.
+    auto.
+  Qed.
+  Lemma word_of_one :
+    word_one = word_of_N 1.
+  Proof.
+    auto.
+  Qed.
 End ConcreteWord.
 
 
