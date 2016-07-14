@@ -172,6 +172,15 @@ Section Example0Continue.
       apply always_fail_eq in H; destruct H; subst
     end.
 
+
+  Search _ (N -> N -> bool).
+
+  Axiom smaller_word_of_N :
+    forall x y,
+    x < 100000 ->
+    y < 100000 ->
+    word_smaller (word_of_N x) (word_of_N y) = (N.ltb x  y).
+
   Theorem example0_spec_impl_match :
     account_state_responds_to_world
       example0_account_state spec_example_0 (fun _ => True).
@@ -191,17 +200,12 @@ Section Example0Continue.
         intros steps.
         case steps as [ | steps]; [ try left; auto | ].
         case steps as [ | steps]; [ try left; auto | ].
-        simpl.
-        unfold jump; simpl.
-        unfold build_venv_called; simpl.
-        unfold venv_update_stack; simpl.
-        unfold venv_change_sfx; simpl.
-        unfold venv_first_instruction; simpl.
-        rewrite N_of_word_of_N.
         { simpl.
-          right.
-          auto. }
-        reflexivity.
+          rewrite smaller_word_of_N; auto; compute; auto. }
+        simpl.
+        rewrite smaller_word_of_N; try solve [compute; auto].
+        simpl.
+        rewrite N_of_word_of_N; solve [compute; auto].
       }
       {
         assumption.
@@ -309,15 +313,33 @@ Section Example1Continue.
       split.
       {
         intro.
+          assert (Z : word_smaller word_zero (word_of_N 256) = true) by admit.
         case steps as [|steps]; [left; auto | ].
         case steps as [|steps]; [left; auto | ].
+        {
+          simpl.
+          rewrite Z.
+          auto.
+        }
         case steps as [|steps]; [left; auto | ].
+        { simpl.
+          rewrite Z.
+          simpl.
+          rewrite Z.
+          simpl.
+          auto.
+        }
         unfold action_example_1 in H.
         always_return_tac.
         right.
         simpl.
+        rewrite Z.
+        simpl.
+        rewrite Z.
+        simpl.
         f_equal.
         f_equal.
+        simpl.
         rewrite cut_memory_zero_nil.
         auto.
       }
@@ -337,7 +359,7 @@ Section Example1Continue.
       simpl.
       congruence.
     }
-  Qed.
+  Admitted.
 
 End Example1Continue.
 

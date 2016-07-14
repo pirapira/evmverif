@@ -285,6 +285,7 @@ Definition init_variable_env (s : storage) (bal : address -> word)
 Inductive instruction_result :=
 | InstructionContinue : variable_env -> instruction_result
 | InstructionToWorld : contract_action -> option variable_env (* to be pushed into the call stack *) -> instruction_result
+| InstructionInvalid : instruction_result (* PUSH1 with more than 255 *)
 .
 
 Definition instruction_failure_result :=
@@ -536,7 +537,11 @@ Require Import Coq.Program.Basics.
 Definition instruction_sem (v : variable_env) (c : constant_env) (i : instruction)
   : instruction_result :=
   match i with
-  | PUSH1 w => stack_0_1_op v c w
+  | PUSH1 w =>
+    if word_smaller w (word_of_N 256%N) then
+      stack_0_1_op v c w
+    else
+      InstructionInvalid
   | SLOAD => stack_1_1_op v c (sload v)
   | SSTORE => sstore v c
   | JUMPI => jumpi v c
@@ -562,7 +567,9 @@ Inductive program_result :=
 | ProgramToWorld : contract_action ->
                    storage (* updated storage *) ->
                    (address -> word) (* updated balance *) ->
-                   option variable_env (* to be pushed in the call stack *) -> program_result.
+                   option variable_env (* to be pushed in the call stack *) -> program_result
+| ProgramInvalid : program_result
+.
 
 
 Fixpoint program_sem (v : variable_env) (c :constant_env) (steps : nat)
@@ -581,6 +588,7 @@ Fixpoint program_sem (v : variable_env) (c :constant_env) (steps : nat)
         | InstructionToWorld a opt_pushed_v =>
           ProgramToWorld a v.(venv_storage) v.(venv_balance) opt_pushed_v
         (* TODO: change the balance when suicide *)
+        | InstructionInvalid => ProgramInvalid
         end
       end
   end.
