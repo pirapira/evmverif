@@ -698,8 +698,8 @@ Definition program_result_approximate (a : program_result) (b : program_result)
 Definition respond_to_call_correctly c a I account_state_responds_to_world :=
       (forall (callenv : call_env)
           act continuation,
-          I (build_venv_called a callenv) /\
-          (I (build_venv_called a callenv) ->
+          I (build_venv_called a callenv) (build_cenv a) /\
+          (I (build_venv_called a callenv) (build_cenv a) ->
            c callenv = ContractAction act continuation ->
           exists pushed_venv, exists st, exists bal,
             (forall steps, program_result_approximate
@@ -712,11 +712,11 @@ Definition respond_to_call_correctly c a I account_state_responds_to_world :=
 
 Definition respond_to_return_correctly (r : return_result -> contract_behavior)
            (a : account_state) I
-           (account_state_responds_to_world : account_state -> response_to_world -> (variable_env -> Prop (*invariant*)) -> Prop) :=
+           account_state_responds_to_world :=
   forall (rr : return_result) venv continuation act,
      Some venv = build_venv_returned a rr ->
-     I venv /\
-     (I venv ->
+     I venv (build_cenv a) /\
+     (I venv (build_cenv a) ->
      r rr = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
      (forall steps,
@@ -728,12 +728,12 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
                                     continuation I).
 
 Definition respond_to_fail_correctly (f : contract_behavior)
-           (a : account_state) (I : variable_env -> Prop)
-           (account_state_responds_to_world : account_state -> response_to_world -> (variable_env -> Prop (*invariant*)) -> Prop) :=
+           (a : account_state) (I : variable_env -> constant_env -> Prop)
+           account_state_responds_to_world :=
   forall venv continuation act,
      Some venv = build_venv_fail a ->
-     I venv /\
-     (I venv ->
+     I venv (build_cenv a) /\
+     (I venv (build_cenv a) ->
      f = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
      (forall steps,
@@ -747,12 +747,12 @@ Definition respond_to_fail_correctly (f : contract_behavior)
 
 
 CoInductive account_state_responds_to_world :
-  account_state -> response_to_world -> (variable_env -> Prop (*invariant*)) -> Prop :=
+  account_state -> response_to_world -> (variable_env -> constant_env -> Prop (*invariant*)) -> Prop :=
 | AccountStep :
     forall (a : account_state)
            (c : call_env -> contract_behavior)
            (r : return_result -> contract_behavior)
-           (I : variable_env -> Prop)
+           (I : variable_env -> constant_env -> Prop)
            f,
       respond_to_call_correctly c a I account_state_responds_to_world ->
       respond_to_return_correctly r a I account_state_responds_to_world ->

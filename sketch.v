@@ -184,7 +184,7 @@ Section Example0Continue.
 
   Theorem example0_spec_impl_match :
     account_state_responds_to_world
-      example0_account_state spec_example_0 (fun _ => True).
+      example0_account_state spec_example_0 (fun _ _ => True).
   Proof.
     cofix.
     apply AccountStep.
@@ -299,7 +299,7 @@ Section Example1Continue.
 
   Theorem example1_spec_impl_match :
     account_state_responds_to_world
-      example1_account_state spec_example_1 (fun _ => True).
+      example1_account_state spec_example_1 (fun _ _ => True).
   Proof.
     cofix.
     apply AccountStep.
@@ -902,7 +902,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     forall st n,
           example2_depth_n_state n st ->
           account_state_responds_to_world
-            st (example2_spec n%Z) (fun _ => True).
+            st (example2_spec n%Z) (fun _ _ => True).
   Proof.
     cofix.
     intros st n n_state.
@@ -1279,5 +1279,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         JUMPI ::
     STOP ::
     nil.
+
+  Definition counter_wallet_invariant income_sofar spending_sofar (v : variable_env) (c : constant_env) : Prop :=
+    word_add (v.(venv_balance) c.(cenv_this)) spending_sofar = word_add v.(venv_value_sent) income_sofar.
 
 End ExamplesOnConcreteWord.
