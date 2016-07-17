@@ -1316,7 +1316,10 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     word_add (v.(venv_balance) c.(cenv_this)) spending_sofar = word_add v.(venv_value_sent) income_sofar.
 
   Axiom counter_wallet_address : address.
-  Axiom counter_wallet_storage : word -> word -> storage.
+
+  Definition counter_wallet_storage (income_sofar spending_sofar : word) : storage :=
+    ST.add 1%Z spending_sofar (ST.add 0%Z income_sofar (ST.empty word))
+    .
 
   Definition counter_wallet_account_state (income_sofar spending_sofar : word) (going_calls : list variable_env) : account_state :=
     {|
@@ -1384,7 +1387,19 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             reflexivity.
           }
           {
-            (* need to solve the above goal first *)
+            cbn.
+            unfold counter_wallet_storage.
+            unfold storage_load.
+            unfold ZModulo.zero.
+            set (prev_income := ST.find _ _).
+            compute in prev_income.
+            unfold prev_income.
+            set (new_income := ZModulo.add income_sofar _).
+            generalize (counter_wallet_correct new_income).
+            intro IH.
+            unfold counter_wallet_account_state in IH.
+            unfold counter_wallet_storage in IH.
+            (* TODO: counter_wallet_storage should use storage_store *)
             admit.
           }
         }
