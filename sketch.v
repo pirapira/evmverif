@@ -1350,8 +1350,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       }
       {
         intro I.
-        case (callenv_data callenv).
+        case_eq (callenv_data callenv).
         { (* input data is nil *)
+          intro data_nil.
           unfold receive_eth.
           intro H.
           inversion H; subst.
@@ -1372,10 +1373,19 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             }
             rewrite E.
             cbn.
-            unfold datasize.
-            (* unfold ConcreteSem.datasize. *)
-            (* TODO: need to define ConcreteSem.datasize *)
-            admit.
+            rewrite data_nil.
+            cbn.
+            repeat (case s as [| s]; [ solve [left; auto] | ]).
+            cbn.
+            set (smaller0 := word_smaller ZModulo.zero _).
+            assert (s00 : smaller0 = true) by admit.
+            rewrite s00.
+            cbn.
+            unfold smaller0 in s00.
+            rewrite s00.
+            cbn.
+            right.
+            reflexivity.
           }
           {
             (* need to solve the above goal first *)
@@ -1383,7 +1393,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           }
         }
         { (* input data is not nil *)
-          intros b l.
+          intros b l bl_eq.
           case_eq (word_eq word_zero (callenv_value callenv)).
           { (* sent value is zero *)
             intro sent_zero.
