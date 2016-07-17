@@ -1410,13 +1410,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                             (storage_store 0%Z new_income
                                (ST.empty word)))) by admit.
             rewrite II.
-            (*
-            eapply IH. *)
-            (* wow, the invariant has changed, what shall I do?
-             * TODO: the invariant should not depend on the semantic arguments.
-             *)
-
-            admit.
+            eapply IH.
           }
         }
         { (* input data is not nil *)
