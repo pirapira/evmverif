@@ -240,6 +240,7 @@ Record variable_env :=
   ; venv_balance : address -> word (* does this blong here?*)
   ; venv_caller : address
   ; venv_value_sent : word
+  ; venv_data_sent : list byte
   (* TODO: add the sequence of executed instructions.
      would be useful for calculating the gas *)
 
@@ -264,7 +265,7 @@ Record constant_env :=
 (** Initialize variable_env variable_env . *)
 Definition init_variable_env (s : storage) (bal : address -> word)
            (caller : address)
-           (cenv : constant_env) (value : word) :=
+           (cenv : constant_env) (value : word) (data : list byte) :=
   {|
     venv_stack := nil ;
     venv_memory := empty_memory ;
@@ -273,6 +274,7 @@ Definition init_variable_env (s : storage) (bal : address -> word)
     venv_balance := bal ;
     venv_caller := caller ;
     venv_value_sent := value ;
+    venv_data_sent := data ;
     venv_storage_at_call := s ;
     venv_balance_at_call := bal ;
   |}.
@@ -304,6 +306,7 @@ Definition venv_update_stack (new_stack : list word) (v : variable_env) :=
     venv_balance := v.(venv_balance) ;
     venv_caller := v.(venv_caller) ;
     venv_value_sent := v.(venv_value_sent) ;
+    venv_data_sent := v.(venv_data_sent) ;
     venv_storage_at_call := v.(venv_storage_at_call) ;
     venv_balance_at_call := v.(venv_balance_at_call)
   |}.
@@ -319,6 +322,7 @@ Definition venv_advance_pc (v : variable_env) :=
     venv_balance := v.(venv_balance) ;
     venv_caller := v.(venv_caller) ;
     venv_value_sent := v.(venv_value_sent) ;
+    venv_data_sent := v.(venv_data_sent) ;
     venv_storage_at_call := v.(venv_storage_at_call) ;
     venv_balance_at_call := v.(venv_balance_at_call)
   |}.
@@ -352,6 +356,7 @@ Definition venv_change_sfx (pos : N) (v : variable_env)
     venv_balance := v.(venv_balance);
     venv_caller := v.(venv_caller);
     venv_value_sent := v.(venv_value_sent);
+    venv_data_sent := v.(venv_data_sent);
     venv_storage_at_call := v.(venv_storage_at_call) ;
     venv_balance_at_call := v.(venv_balance_at_call)
   |}.
@@ -371,6 +376,7 @@ Definition venv_update_storage (addr : word) (val : word) (v : variable_env)
     venv_balance := v.(venv_balance);
     venv_caller := v.(venv_caller);
     venv_value_sent := v.(venv_value_sent);
+    venv_data_sent := v.(venv_data_sent);
     venv_storage_at_call := v.(venv_storage_at_call) ;
     venv_balance_at_call := v.(venv_balance_at_call)
   |}.
@@ -464,7 +470,11 @@ Definition jumpi (v : variable_env) (c : constant_env) : instruction_result :=
 Arguments jumpi v c /.
 
 
-Axiom datasize : variable_env -> word.
+Search _ (nat -> Z).
+
+Definition datasize (v : variable_env) : word :=
+  word_of_nat (List.length v.(venv_data_sent)).
+
 Axiom cut_data : variable_env -> word -> word.
 
 (* currently this is not very true: to fix, add the sequence of executed instructions in venv. *)
@@ -488,7 +498,7 @@ Definition call (v : variable_env) (c : constant_env) : instruction_result :=
            callarg_output_begin := e5 ;
            callarg_output_size := e6 ;
          |})
-      (Some
+      (Some (* TODO: this part should be abstracted away *)
          {|
            venv_stack := rest;
            venv_memory := v.(venv_memory);
@@ -501,6 +511,7 @@ Definition call (v : variable_env) (c : constant_env) : instruction_result :=
                 (word_sub (v.(venv_balance) (c.(cenv_this))) e3) v.(venv_balance)));
            venv_caller := v.(venv_caller);
            venv_value_sent := v.(venv_value_sent) ;
+           venv_data_sent := v.(venv_data_sent) ;
            venv_storage_at_call := v.(venv_storage_at_call) ;
            venv_balance_at_call := v.(venv_balance_at_call)
          |}
@@ -624,6 +635,7 @@ Definition build_venv_called (a : account_state) (env : call_env) :
       venv_balance := env.(callenv_balance) ;
       venv_caller := env.(callenv_caller) ;
       venv_value_sent := env.(callenv_value) ;
+      venv_data_sent := env.(callenv_data) ;
       venv_storage_at_call := a.(account_storage) ;
       venv_balance_at_call := env.(callenv_balance)
    |}.

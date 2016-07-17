@@ -694,6 +694,9 @@ Module ConcreteWord <: Word.
   Proof.
     auto.
   Qed.
+
+  Definition word_of_nat :=
+    BinInt.Z_of_nat.
 End ConcreteWord.
 
 

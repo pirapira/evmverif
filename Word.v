@@ -18,6 +18,8 @@ Module Type Word.
     (* TODO: This 10000 is a bit arbitrary. *)
   forall (n : N), n < 10000 -> N_of_word (word_of_N n) = n.
 
+  Parameter word_of_nat : nat -> word.
+
   (* TODO: turn these into definitions *)
   Definition word_zero : word := word_of_N 0.
   Definition word_one : word := word_of_N 1.
