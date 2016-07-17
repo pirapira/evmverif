@@ -429,7 +429,7 @@ Definition stack_2_1_op (v : variable_env) (c : constant_env)
   end.
 
 Definition sload (v : variable_env) (idx : word) : word :=
-  storage_load v.(venv_storage) idx.
+  storage_load idx v.(venv_storage).
 
 Arguments sload v idx /.
 

@@ -89,7 +89,7 @@ Module Type Word.
     forall start m, cut_memory start word_zero m = nil.
 
   Parameter storage : Type.
-  Parameter storage_load : storage -> word -> word.
+  Parameter storage_load : word -> storage -> word.
   Arguments storage_load idx s /.
 
   Parameter storage_store : word (* idx *) -> word (* value *) -> storage -> storage.
@@ -97,6 +97,6 @@ Module Type Word.
 
   Parameter empty_storage : storage.
   Parameter empty_storage_empty : forall idx : word,
-      is_true (word_iszero (storage_load empty_storage idx)).
+      is_true (word_iszero (storage_load idx empty_storage)).
 
 End Word.

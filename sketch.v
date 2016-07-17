@@ -664,7 +664,7 @@ Module ConcreteWord <: Word.
 
   Eval compute in ST.key.
 
-  Definition storage_load (m : storage) (k : word) : word :=
+  Definition storage_load (k : word) (m : storage) : word :=
     match ST.find k m with
     | None => word_zero
     | Some x => x
@@ -677,7 +677,7 @@ Module ConcreteWord <: Word.
 
   Definition empty_storage : storage := ST.empty word.
   Lemma empty_storage_empty : forall idx : WordOrdered.t,
-      is_true (word_iszero (storage_load empty_storage idx)).
+      is_true (word_iszero (storage_load idx empty_storage)).
   Proof.
     intro idx.
     compute.
@@ -742,7 +742,7 @@ Module ExamplesOnConcreteWord.
        st.(account_ongoing_calls) = nil ) \/
      (n = 1%Z /\
       st.(account_code) = example2_program /\
-      storage_load (account_storage st) 0%Z = 1%Z /\
+      storage_load 0%Z (account_storage st) = 1%Z /\
       st.(account_address) = example2_address /\
       is_true (ST.equal word_eq (storage_store 0%Z 0%Z st.(account_storage)) empty_storage)  /\
       exists ve, (st.(account_ongoing_calls) = ve :: nil /\
@@ -770,7 +770,7 @@ Definition something_to_call :=
      callarg_value := 0%Z;
      callarg_data := cut_memory 0%Z 0%Z empty_memory;
      callarg_output_begin := 0%Z;
-     callarg_output_size := storage_load empty_storage 0%Z |}.
+     callarg_output_size := storage_load 0%Z empty_storage |}.
 
 (* TODO: remove duplicate somehow *)
 CoFixpoint call_but_fail_on_reentrance (depth : word) :=
@@ -936,7 +936,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           simpl.
           rewrite nst3.
           repeat (case s as [| s]; [ solve [left; auto] | ]).
-          assert (stl : forall idx, storage_load (account_storage st) idx = storage_load empty_storage idx).
+          assert (stl : forall idx, storage_load idx (account_storage st) = storage_load idx empty_storage).
           {
             intro idx.
             unfold storage_load.
@@ -1315,8 +1315,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
 
   (* TODO: I think I need to change the order of arguments of storage_load *)
   Definition counter_wallet_invariant (v : variable_env) (c : constant_env) : Prop :=
-      word_add (v.(venv_balance) c.(cenv_this)) (storage_load v.(venv_storage) 1%Z)
-    = word_add v.(venv_value_sent) (storage_load v.(venv_storage) 0%Z).
+      word_add (v.(venv_balance) c.(cenv_this)) (storage_load 1%Z v.(venv_storage))
+    = word_add v.(venv_value_sent) (storage_load 0%Z v.(venv_storage)).
 
   Axiom counter_wallet_address : address.
 
