@@ -1232,6 +1232,34 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         failing_action (counter_wallet income_sofar spending_sofar)
       ).
 
+  Lemma counter_wallet_def :
+    forall income_sofar spending_sofar,
+      counter_wallet income_sofar spending_sofar =
+      Respond
+        (fun cenv =>
+         match cenv.(callenv_data) with
+         | nil => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar)
+         | _ =>
+           if word_eq word_zero (cenv.(callenv_value)) then
+             if Nat.leb 64 (List.length cenv.(callenv_data)) then
+               let addr := list_slice 0 32 cenv.(callenv_data) in
+               let value := list_slice 32 32 cenv.(callenv_data) in
+               sending_action addr value (counter_wallet income_sofar (word_add spending_sofar value))
+             else
+               failing_action (counter_wallet income_sofar spending_sofar)
+           else
+             failing_action (counter_wallet income_sofar spending_sofar)
+         end
+        )
+        (fun returned =>
+           ContractAction (ContractReturn nil) (counter_wallet income_sofar spending_sofar)
+        )
+        (
+          failing_action (counter_wallet income_sofar spending_sofar)
+        ).
+  Proof.
+  Admitted.
+
   (* TODO: streamline this by allowing labels in JUMPDEST *)
   Definition plus_size_label : word := 13%Z.
 
@@ -1286,22 +1314,91 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Axiom counter_wallet_address : address.
   Axiom counter_wallet_storage : word -> word -> storage.
 
-  Definition counter_wallet_account_state (income_sofar spending_sofar : word) : account_state :=
+  Definition counter_wallet_account_state (income_sofar spending_sofar : word) (going_calls : list variable_env) : account_state :=
     {|
       account_address := counter_wallet_address (* TODO: declare this in a section *);
       account_storage := counter_wallet_storage income_sofar spending_sofar ;
       account_code := counter_wallet_code ;
-      account_ongoing_calls := nil (* TODO: must take a list of calls. *)
+      account_ongoing_calls := going_calls
     |}
     .
 
   Theorem counter_wallet_correct :
     forall (income_sofar spending_sofar : word),
       account_state_responds_to_world
-        (counter_wallet_account_state income_sofar spending_sofar)
+        (counter_wallet_account_state income_sofar spending_sofar nil)
         (counter_wallet income_sofar spending_sofar)
         (counter_wallet_invariant income_sofar spending_sofar).
+    (* TODO: strengthen the statement so that coinduction goes through. *)
   Proof.
+    cofix.
+    intros income_sofar spending_sofar.
+    rewrite counter_wallet_def.
+    apply AccountStep.
+    {
+      unfold respond_to_call_correctly.
+      intros callenv act cont.
+      split.
+      {
+        unfold counter_wallet_invariant.
+        simpl.
+        (* TODO: need some condition on callenv_balance... account_state needs balance, maybe. *)
+        admit.
+      }
+      {
+        intro I.
+        case (callenv_data callenv).
+        { (* input data is nil *)
+          unfold receive_eth.
+          intro H.
+          inversion H; subst.
+          clear H.
+          eexists.
+          eexists.
+          eexists.
+          split.
+          {
+            intro s.
+            repeat (case s as [| s]; [ solve [left; auto] | ]).
+            cbn.
+            unfold plus_size_label.
+            cbn.
+            assert (E : word_smaller 13%Z 256%Z = true).
+            {
+              compute; auto.
+            }
+            rewrite E.
+            cbn.
+            unfold datasize.
+            (* unfold ConcreteSem.datasize. *)
+            (* TODO: need to define ConcreteSem.datasize *)
+            admit.
+          }
+          {
+            (* need to solve the above goal first *)
+            admit.
+          }
+        }
+        { (* input data is not nil *)
+          intros b l.
+          case_eq (word_eq word_zero (callenv_value callenv)).
+          { (* sent value is zero *)
+            intro sent_zero.
+            (* hmmm wanting ssreflect tactics. *)
+            admit.
+          }
+          {
+            admit.
+          }
+        }
+      }
+    }
+    {
+      admit.
+    }
+    {
+      admit.
+    }
   Admitted.
 
 End ExamplesOnConcreteWord.
