@@ -1385,18 +1385,56 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           { (* sent value is zero *)
             intro sent_zero.
             (* hmmm wanting ssreflect tactics. *)
-            admit.
+            match goal with
+              | [ |- ((if ?t then _ else _) = _) -> _] => case_eq t
+            end.
+            {
+              (* data big enough *)
+              admit.
+            }
+            {
+              intro data_short.
+              unfold failing_action.
+              intro H.
+              inversion H; subst.
+              clear H.
+              eexists.
+              eexists.
+              eexists.
+              split.
+              {
+                intros s.
+                repeat (case s as [| s]; [ solve [left; auto] | ]).
+                cbn.
+                unfold plus_size_label.
+                assert (E : word_smaller 13%Z 256%Z = true).
+                {
+                  compute; auto.
+                }
+                rewrite E.
+                cbn.
+                (* TODO need definition of datasize *)
+                admit.
+              }
+              {
+                (* need to solve the previous goal first *)
+                admit.
+              }
+            }
           }
-          {
+          { (* sent value is not zero *)
+            (* I can just imagine this needs the definition of datasize, too *)
             admit.
           }
         }
       }
     }
     {
+      (* this does not make sense until the call stack is non-empty *)
       admit.
     }
     {
+      (* this does not make sense until the call stack is non-empty *)
       admit.
     }
   Admitted.
