@@ -1312,8 +1312,11 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     STOP ::
     nil.
 
-  Definition counter_wallet_invariant income_sofar spending_sofar (v : variable_env) (c : constant_env) : Prop :=
-    word_add (v.(venv_balance) c.(cenv_this)) spending_sofar = word_add v.(venv_value_sent) income_sofar.
+
+  (* TODO: I think I need to change the order of arguments of storage_load *)
+  Definition counter_wallet_invariant (v : variable_env) (c : constant_env) : Prop :=
+      word_add (v.(venv_balance) c.(cenv_this)) (storage_load v.(venv_storage) 1%Z)
+    = word_add v.(venv_value_sent) (storage_load v.(venv_storage) 0%Z).
 
   Axiom counter_wallet_address : address.
 
@@ -1335,7 +1338,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       account_state_responds_to_world
         (counter_wallet_account_state income_sofar spending_sofar nil)
         (counter_wallet income_sofar spending_sofar)
-        (counter_wallet_invariant income_sofar spending_sofar).
+        counter_wallet_invariant.
     (* TODO: strengthen the statement so that coinduction goes through. *)
   Proof.
     cofix.
