@@ -1318,7 +1318,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Axiom counter_wallet_address : address.
 
   Definition counter_wallet_storage (income_sofar spending_sofar : word) : storage :=
-    ST.add 1%Z spending_sofar (ST.add 0%Z income_sofar (ST.empty word))
+    storage_store 1%Z spending_sofar (storage_store 0%Z income_sofar (ST.empty word))
     .
 
   Definition counter_wallet_account_state (income_sofar spending_sofar : word) (going_calls : list variable_env) : account_state :=
@@ -1392,14 +1392,27 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             unfold storage_load.
             unfold ZModulo.zero.
             set (prev_income := ST.find _ _).
-            compute in prev_income.
-            unfold prev_income.
+            assert (P : prev_income = Some income_sofar) by admit.
+            rewrite P.
             set (new_income := ZModulo.add income_sofar _).
             generalize (counter_wallet_correct new_income).
             intro IH.
             unfold counter_wallet_account_state in IH.
             unfold counter_wallet_storage in IH.
-            (* TODO: counter_wallet_storage should use storage_store *)
+            assert (II : storage_store 0%Z new_income
+                         (storage_store 1%Z spending_sofar
+                            (storage_store 0%Z income_sofar
+                               (ST.empty word))) =
+                         (storage_store 1%Z spending_sofar
+                            (storage_store 0%Z new_income
+                               (ST.empty word)))) by admit.
+            rewrite II.
+            (*
+            eapply IH. *)
+            (* wow, the invariant has changed, what shall I do?
+             * TODO: the invariant should not depend on the semantic arguments.
+             *)
+
             admit.
           }
         }
