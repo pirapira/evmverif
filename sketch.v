@@ -1265,6 +1265,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
 
   (* TODO: streamline this by allowing labels in JUMPDEST *)
   Definition plus_size_label : word := 13%Z.
+  Arguments plus_size_label /.
 
   Definition counter_wallet_code : program :=
     CALLDATASIZE ::
@@ -1365,12 +1366,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             intro s.
             repeat (case s as [| s]; [ solve [left; auto] | ]).
             cbn.
-            unfold plus_size_label.
-            cbn.
-            assert (E : word_smaller 13%Z 256%Z = true).
-            {
-              compute; auto.
-            }
+            assert (E : word_smaller 13%Z 256%Z = true) by (compute; auto).
             rewrite E.
             cbn.
             rewrite data_nil.
