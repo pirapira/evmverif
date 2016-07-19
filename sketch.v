@@ -1287,7 +1287,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     CALLDATASIZE ::
       PUSH1 (64%Z) ::
         instr_GT ::
-      PUSH1 (2%Z) ::
+      PUSH1 (0%Z) ::
         JUMPI (* data too small *) ::
     PUSH1 (0%Z) (* out size *) ::
       PUSH1 (0%Z) (* out offset *) ::
@@ -1447,7 +1447,12 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                 }
                 rewrite E.
                 cbn.
-                (* TODO need definition of datasize *)
+                unfold datasize.
+                set (zero_cond := ZModulo.eq0 _ _ ).
+                assert (Zf : zero_cond = false) by admit.
+                rewrite Zf.
+                (* something wrong is happening *)
+
                 admit.
               }
               {

@@ -463,7 +463,7 @@ Definition jumpi (v : variable_env) (c : constant_env) : instruction_result :=
     if word_iszero cond then
       InstructionContinue (venv_advance_pc (venv_pop_stack 2 v))
     else
-      jump (venv_pop_stack 1 v) c (* this has to change when gas is considered *)
+      jump (venv_update_stack (pos :: rest) v) c (* this has to change when gas is considered  *)
   | _ => instruction_failure_result
   end.
 
