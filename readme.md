@@ -7,7 +7,7 @@ This repository contains
 * formal proofs that the programs satisfy the specifications.
 
 All development is currently in [Coq](https://coq.inria.fr/).
-With Coq 8.5pl1,
+With Coq 8.5pl2,
 ```
 make
 ```
