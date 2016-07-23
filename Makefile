@@ -1,3 +1,5 @@
+.PHONY: clean
+
 all: sketch.vo
 
 sketch.vo: Word.vo sketch.v ContractSem.vo
@@ -8,3 +10,6 @@ ContractSem.vo: Word.vo ContractSem.v
 
 Word.vo: Word.v
 	coqc Word.v
+
+clean:
+	rm -rf *.vo
