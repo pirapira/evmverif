@@ -1389,15 +1389,15 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     .
 
   Theorem counter_wallet_correct :
-    forall (income_sofar spending_sofar : word),
+    forall (income_sofar spending_sofar : word) ongoing,
       account_state_responds_to_world
-        (counter_wallet_account_state income_sofar spending_sofar nil)
+        (counter_wallet_account_state income_sofar spending_sofar ongoing)
         (counter_wallet income_sofar spending_sofar)
         counter_wallet_invariant.
     (* TODO: strengthen the statement so that coinduction goes through. *)
   Proof.
     cofix.
-    intros income_sofar spending_sofar.
+    intros income_sofar spending_sofar ongoing.
     rewrite counter_wallet_def.
     apply AccountStep.
     {
@@ -1597,7 +1597,17 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   cbn.
                   unfold cut_data.
                   cbn.
-                  (* spec says nil, but actually a call is pushed *)
+                  unfold counter_wallet_account_state in counter_wallet_correct.
+                  set (new_storage := storage_store _ _ _).
+                  set (new_ongoing := _ :: ongoing).
+                  generalize new_ongoing.
+                  clear new_ongoing.
+                  intro new_ongoing.
+                  unfold update_balance.
+                  rewrite address_eq_refl.
+                  rewrite addsub.
+
+                  (* in the concrete world, balance is not changed. *)
                   admit.
                 }
               }
@@ -1658,7 +1668,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   compute_word_smaller; cbn.
                   compute_word_smaller; cbn.
                   set (cd := cut_data _ _).
-                  (* TODO: cut_data needs to be defined *)
                   assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
                   rewrite cdH.
                   clear cdH cd.
