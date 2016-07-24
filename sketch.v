@@ -1605,10 +1605,13 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   intro new_ongoing.
                   unfold update_balance.
                   rewrite address_eq_refl.
-                  rewrite addsub.
-
-                  (* in the concrete world, balance is not changed. *)
-                  admit.
+                  set (new_balance := if (_ : bool) then _ else _).
+                  set (new_sp := ZModulo.add spending_sofar _).
+                  assert (S : new_storage = counter_wallet_storage income_sofar new_sp) by admit.
+                  rewrite S.
+                  assert (B : new_balance = word_sub income_sofar new_sp) by admit.
+                  rewrite B.
+                  apply (counter_wallet_correct income_sofar new_sp).
                 }
               }
               { (* not enough balance *)
