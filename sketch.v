@@ -257,11 +257,11 @@ Section Example1Continue.
     RETURN ::
     nil.
 
-  Definition example1_account_state :=
+  Definition example1_account_state bal :=
     {| account_address := example1_address ;
        account_storage := empty_storage ;
        account_code := example1_program ;
-       account_balance := word_zero ;
+       account_balance := bal ;
        account_ongoing_calls := nil |}.
 
   Lemma always_return_def :
@@ -302,10 +302,12 @@ Section Example1Continue.
 
 
   Theorem example1_spec_impl_match :
+    forall bal,
     account_state_responds_to_world
-      example1_account_state spec_example_1 (fun _ _ => True).
+      (example1_account_state bal) spec_example_1 (fun _ _ => True).
   Proof.
     cofix.
+    intro bal.
     apply AccountStep.
     { (* call case *)
       unfold respond_to_call_correctly.
@@ -355,8 +357,7 @@ Section Example1Continue.
       {
         unfold action_example_1 in H.
         always_return_tac.
-        (* TODO: need to generalize the state for the balance *)
-        admit.
+        apply example1_spec_impl_match.
       }
     }
     {
@@ -369,7 +370,7 @@ Section Example1Continue.
       simpl.
       congruence.
     }
-  Admitted.
+  Qed.
 
 End Example1Continue.
 
