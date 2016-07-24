@@ -141,11 +141,11 @@ Section Example0Continue.
     PUSH1 (word_of_N 0) ::
     JUMP :: nil.
 
-  Definition example0_account_state :=
+  Definition example0_account_state (bal : word) :=
     {| account_address := example0_address ;
        account_storage := empty_storage ;
        account_code := example0_program ;
-       account_balance := word_zero ;
+       account_balance := bal ;
        account_ongoing_calls := nil |}.
 
 
@@ -184,10 +184,12 @@ Section Example0Continue.
     word_smaller (word_of_N x) (word_of_N y) = (N.ltb x  y).
 
   Theorem example0_spec_impl_match :
-    account_state_responds_to_world
-      example0_account_state spec_example_0 (fun _ _ => True).
+    forall bal,
+      account_state_responds_to_world
+        (example0_account_state bal) spec_example_0 (fun _ _ => True).
   Proof.
     cofix.
+    intro bal.
     apply AccountStep.
     {
       intros ? ? ?.
