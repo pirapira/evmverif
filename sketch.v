@@ -1,5 +1,5 @@
 (* EVM Contract Behavior Formalization *)
-(* for Coq 8.5pl1 *)
+(* for Coq 8.5pl2 *)
 
 (* Yoichi Hirai i@yoichihirai.com
    Creative Commons Attribution-ShareAlike 4.0 International License *)
@@ -145,6 +145,7 @@ Section Example0Continue.
     {| account_address := example0_address ;
        account_storage := empty_storage ;
        account_code := example0_program ;
+       account_balance := word_zero ;
        account_ongoing_calls := nil |}.
 
 
@@ -209,7 +210,12 @@ Section Example0Continue.
         rewrite N_of_word_of_N; solve [compute; auto].
       }
       {
-        assumption.
+        simpl.
+        unfold example0_account_state in example0_spec_impl_match.
+        (* TODO: The balance might be updated.  Need to generalize the
+         * spec and the state for the balance.
+         *)
+        admit.
       }
     }
     {
@@ -228,7 +234,7 @@ Section Example0Continue.
       simpl.
       congruence.
     }
-  Qed.
+  Admitted.
 
 End Example0Continue.
 
@@ -258,6 +264,7 @@ Section Example1Continue.
     {| account_address := example1_address ;
        account_storage := empty_storage ;
        account_code := example1_program ;
+       account_balance := word_zero ;
        account_ongoing_calls := nil |}.
 
   Lemma always_return_def :
@@ -351,7 +358,8 @@ Section Example1Continue.
       {
         unfold action_example_1 in H.
         always_return_tac.
-        apply example1_spec_impl_match.
+        (* TODO: need to generalize the state for the balance *)
+        admit.
       }
     }
     {
@@ -364,7 +372,7 @@ Section Example1Continue.
       simpl.
       congruence.
     }
-  Qed.
+  Admitted.
 
 End Example1Continue.
 
@@ -970,19 +978,24 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           repeat (case s as [| s]; [ solve [left; auto] | ]).
           simpl.
 
-          assert (H : word_smaller (callenv_balance ce (account_address st)) 0%Z = false).
+          set (sm0 := word_smaller _ 0%Z).
+
+          assert (H : sm0 = false).
           {
+            unfold sm0.
             unfold word_smaller.
             simpl.
             rewrite ZModulo.spec_compare.
-            assert (0 <= ZModulo.to_Z ALEN.p (callenv_balance ce (account_address st)))%Z.
+            set (v0 := (ZModulo.to_Z _ _)%Z).
+            assert (0 <= v0)%Z.
             {
               apply (ZModulo.spec_to_Z_1).
               unfold ALEN.p.
               congruence.
             }
-            case_eq (ZModulo.to_Z ALEN.p (callenv_balance ce (account_address st))
-      ?= ZModulo.to_Z ALEN.p 0)%Z; try congruence.
+            set (comparison := (_ ?= _)%Z).
+            case_eq comparison; try congruence.
+            unfold comparison.
             rewrite Z.compare_nge_iff.
             intro H'.
             apply False_ind.
@@ -1329,6 +1342,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       account_address := counter_wallet_address (* TODO: declare this in a section *);
       account_storage := counter_wallet_storage income_sofar spending_sofar ;
       account_code := counter_wallet_code ;
+      account_balance := word_sub income_sofar spending_sofar ;
       account_ongoing_calls := going_calls
     |}
     .
@@ -1410,7 +1424,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                             (storage_store 0%Z new_income
                                (ST.empty word)))) by admit.
             rewrite II.
-            eapply IH.
+            (* TODO: after fixing prev proofs, come here *)
+            admit.
+            (* eapply IH. *)
           }
         }
         { (* input data is not nil *)

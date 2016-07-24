@@ -611,6 +611,11 @@ Record account_state :=
   { account_address : address
   ; account_storage : storage
   ; account_code : list instruction
+  ; account_balance : word
+    (* this duplicates from the global balance function, but this field
+       is necessary for writing invariants involving the balance.
+       The balance of the account does not change unless it is called.
+     *)
   ; account_ongoing_calls : list variable_env
   }.
 
@@ -618,6 +623,7 @@ Definition account_state_update_storage new_st orig :=
   {| account_address := orig.(account_address);
      account_code    := orig.(account_code);
      account_storage := new_st;
+     account_balance := orig.(account_balance);
      account_ongoing_calls := orig.(account_ongoing_calls)
   |}.
 
@@ -632,7 +638,10 @@ Definition build_venv_called (a : account_state) (env : call_env) :
       venv_memory := empty_memory;
       venv_prg_sfx := a.(account_code) ;
       venv_storage := a.(account_storage) ;
-      venv_balance := env.(callenv_balance) ;
+      venv_balance :=
+        update_balance a.(account_address)
+                           (word_add a.(account_balance) env.(callenv_value))
+                           env.(callenv_balance) ;
       venv_caller := env.(callenv_caller) ;
       venv_value_sent := env.(callenv_value) ;
       venv_data_sent := env.(callenv_data) ;
@@ -678,6 +687,7 @@ Definition account_state_pop_ongoing_call (orig : account_state) :=
   {| account_address := orig.(account_address);
      account_storage := orig.(account_storage);
      account_code := orig.(account_code);
+     account_balance := orig.(account_balance);
      account_ongoing_calls := tail (orig.(account_ongoing_calls))
   |}.
 
@@ -690,11 +700,18 @@ Definition update_account_state (prev : account_state) (act: contract_action)
   account_state_update_storage st
         match v_opt with
         | None =>
-          prev
+          {|
+            account_address := prev.(account_address) ;
+            account_storage := st ;
+            account_balance := bal (prev.(account_address));
+            account_code := prev.(account_code) ;
+            account_ongoing_calls := prev.(account_ongoing_calls)
+          |}
         | Some pushed =>
           {|
             account_address := prev.(account_address) ;
-            account_storage := pushed.(venv_storage) ;
+            account_storage := st ;
+            account_balance := bal (prev.(account_address));
             account_code := prev.(account_code) ;
             account_ongoing_calls := pushed :: prev.(account_ongoing_calls)
           |}
