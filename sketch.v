@@ -212,12 +212,7 @@ Section Example0Continue.
         rewrite N_of_word_of_N; solve [compute; auto].
       }
       {
-        simpl.
-        unfold example0_account_state in example0_spec_impl_match.
-        (* TODO: The balance might be updated.  Need to generalize the
-         * spec and the state for the balance.
-         *)
-        admit.
+        apply example0_spec_impl_match.
       }
     }
     {
@@ -236,7 +231,7 @@ Section Example0Continue.
       simpl.
       congruence.
     }
-  Admitted.
+  Qed.
 
 End Example0Continue.
 
