@@ -1246,8 +1246,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Definition receive_eth cont : contract_behavior :=
     ContractAction (ContractReturn nil) cont.
 
-  Axiom list_slice : N -> N -> list byte -> word.
-
   Definition sending_action recipient value cont : contract_behavior :=
     ContractAction (ContractCall
                       {|
@@ -1573,6 +1571,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   f_equal.
                   f_equal.
                   {
+
                     (* TODO: cut_data needs to be defined *)
                     admit.
                   }

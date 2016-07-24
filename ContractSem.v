@@ -479,7 +479,10 @@ Search _ (nat -> Z).
 Definition datasize (v : variable_env) : word :=
   word_of_nat (List.length v.(venv_data_sent)).
 
-Axiom cut_data : variable_env -> word -> word.
+Axiom list_slice : N -> N -> list byte -> word.
+
+Definition cut_data (v : variable_env) (idx: word) : word :=
+  list_slice (N_of_word idx) 32 v.(venv_data_sent).
 
 (* currently this is not very true: to fix, add the sequence of executed instructions in venv. *)
 Axiom gas_limit : variable_env -> word.
