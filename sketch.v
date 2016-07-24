@@ -1246,12 +1246,12 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Definition receive_eth cont : contract_behavior :=
     ContractAction (ContractReturn nil) cont.
 
-  Definition sending_action recipient value cont : contract_behavior :=
+  Definition sending_action (recipient : word) value cont : contract_behavior :=
     ContractAction (ContractCall
                       {|
                         callarg_gaslimit := 30000%Z;
-                        callarg_code := recipient;
-                        callarg_recipient := recipient;
+                        callarg_code := address_of_word recipient;
+                        callarg_recipient := address_of_word recipient;
                         callarg_value := value;
                         callarg_data := nil;
                         callarg_output_begin := 0%Z;
@@ -1571,22 +1571,29 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   f_equal.
                   f_equal.
                   {
-
-                    (* TODO: cut_data needs to be defined *)
-                    admit.
+                    unfold cut_data.
+                    simpl.
+                    rewrite bl_eq.
+                    reflexivity.
                   }
-                  { (* TODO: cut_data needs to be defined *)
-                    admit.
+                  {
+                    unfold cut_data.
+                    simpl.
+                    rewrite bl_eq.
+                    reflexivity.
                   }
-                  { (* TODO: cut_data needs to be defined *)
-                    admit.
+                  {
+                    unfold cut_data.
+                    simpl.
+                    rewrite bl_eq.
+                    reflexivity.
                   }
                   {
                     (* TODO: need to define cut_memory *)
                     admit.
                   }
                 }
-                { admit. (* waiting for above *)
+                { admit. (* now ready to be pursued *)
                 }
               }
               { (* not enough balance *)
