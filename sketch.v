@@ -1485,8 +1485,43 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
               | [ |- ((if ?t then _ else _) = _) -> _] => case_eq t
             end.
             {
-              (* data big enough *)
-              admit.
+              intro data_big_enough.
+              unfold sending_action.
+              intro H.
+              inversion H; subst.
+              clear H.
+              eexists.
+              eexists.
+              eexists.
+              split.
+              {
+                intro s.
+                repeat (case s as [| s]; [ solve [left; auto] | ]).
+                cbn.
+                assert (Q : word_smaller 13%Z 256%Z = true) by admit.
+                rewrite Q.
+                cbn.
+                unfold datasize.
+                cbn.
+                set (e0 := ZModulo.eq0 _ _).
+                assert (R : e0 = true) by admit.
+                rewrite R.
+                repeat (case s as [| s]; [ solve [left; auto] | ]).
+                cbn.
+                set (sm := word_smaller _ _).
+                assert (S : sm = true) by admit.
+                rewrite S.
+                cbn.
+                fold sm.
+                rewrite S.
+                cbn.
+                (* TODO: program returned!  although expected to call! *)
+                admit.
+              }
+              {
+                (* This can be solved only after above *)
+                admit.
+              }
             }
             {
               intro data_short.
