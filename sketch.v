@@ -1743,7 +1743,26 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           }
           { (* sent value is not zero, and data is also sent; should fail *)
             (* I can just imagine this needs the definition of datasize, too *)
-            admit.
+            idtac.
+            intro value_nonzero.
+            intro H.
+            inversion H; subst.
+            eexists.
+            eexists.
+            eexists.
+            split.
+            {
+              intro s.
+              repeat (case s as [| s]; [ solve [left; auto] | ]).
+              cbn; compute_word_smaller.
+              cbn.
+              (* use bl_eq *)
+              admit.
+            }
+            {
+              (* wait till existential variables are instantiated above *)
+              admit.
+            }
           }
         }
       }
