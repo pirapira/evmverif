@@ -7,6 +7,7 @@ Module Type Word.
   Parameter word_eq : word -> word -> bool.
   Parameter word_add : word -> word -> word.
   Parameter word_sub : word -> word -> word.
+  Parameter word_mul : word -> word -> word.
   Parameter word_iszero : word -> bool.
   (* TODO: state correctness of word_iszero *)
   Parameter word_smaller : word -> word -> bool.

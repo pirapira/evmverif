@@ -455,6 +455,8 @@ Module ConcreteWord <: Word.
 
   Arguments word_add a b /.
 
+  Definition word_mul (a b : W.t) := ZnZ.mul a b.
+
   Definition word_sub := ZnZ.sub.
 
   Definition word_one := ZnZ.one.
@@ -1289,8 +1291,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Lemma counter_wallet_def :
     forall income_sofar spending_sofar,
       counter_wallet income_sofar spending_sofar =
-      Respond
-        (fun cenv =>
+    Respond
+      (fun cenv =>
          match cenv.(callenv_data) with
          | nil => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar)
          | _ =>
@@ -1298,19 +1300,22 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
              if Nat.leb 64 (List.length cenv.(callenv_data)) then
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
-               sending_action addr value (counter_wallet income_sofar (word_add spending_sofar value))
+               if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
+                 sending_action addr value (counter_wallet income_sofar (word_add spending_sofar value))
+               else
+                 failing_action (counter_wallet income_sofar spending_sofar)
              else
                failing_action (counter_wallet income_sofar spending_sofar)
            else
              failing_action (counter_wallet income_sofar spending_sofar)
          end
-        )
-        (fun returned =>
-           ContractAction (ContractReturn nil) (counter_wallet income_sofar spending_sofar)
-        )
-        (
-          failing_action (counter_wallet income_sofar spending_sofar)
-        ).
+      )
+      (fun returned =>
+         ContractAction (ContractReturn nil) (counter_wallet income_sofar spending_sofar)
+      )
+      (
+        failing_action (counter_wallet income_sofar spending_sofar)
+      ).
   Proof.
   Admitted.
 
@@ -1355,7 +1360,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                     ADD ::
                   PUSH1 (1%Z) ::
                     SSTORE ::
-                GASLIMIT ::
+                PUSH2 (30000%Z) ::
                   CALL ::
       ISZERO ::
       PUSH1 word_zero ::
@@ -1493,77 +1498,164 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             {
               intro data_big_enough.
               unfold sending_action.
-              intro H.
-              inversion H; subst.
-              clear H.
-              eexists.
-              eexists.
-              eexists.
-              split.
-              {
-                intro s.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
-                assert (Q : word_smaller 13%Z 256%Z = true) by admit.
-                rewrite Q.
-                cbn.
-                unfold datasize.
-                cbn.
-                set (e0 := ZModulo.eq0 _ _).
-                assert (R : e0 = false) by admit.
-                rewrite R.
-                unfold N_of_word.
-                cbn.
-                unfold ZModulo.to_Z.
-                unfold ZModulo.wB.
-                simpl.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                simpl.
-                assert (Z : word_iszero (callenv_value callenv) = true) by admit.
-                rewrite Z.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
-                set (ws := word_smaller 64%Z 256%Z).
-                compute in ws.
-                unfold ws.
-                clear ws.
-                cbn.
-                unfold datasize.
-                simpl.
-                set (s64 := word_smaller _ _).
-                assert (S : s64 = false) by admit.
-                rewrite S.
-                simpl.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
-                (** TODO: make this tactic only when immediate *)
-                (** TODO: use this tactic *)
-                Ltac compute_word_smaller :=
-                  set (focus := word_smaller _ _);
-                  compute in focus;
-                  unfold focus;
-                  clear focus.
-                compute_word_smaller; cbn.
-                compute_word_smaller; cbn.
-                compute_word_smaller; cbn.
-                compute_word_smaller; cbn.
-                compute_word_smaller; cbn.
-                compute_word_smaller; cbn.
-                compute_word_smaller; cbn.
-                compute_word_smaller; cbn.
-                compute_word_smaller; cbn.
-                set (cd := cut_data _ _).
-                (* TODO: cut_data needs to be defined *)
-                assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
-                rewrite cdH.
-                (* Oh, the implementation might fail, but the spec says send something *)
-                (* TODO: need to change the spec *)
-
-                admit.
+              (* Here, before introducing the existential variables,
+               * all ambuiguities must be resolved. *)
+              set (enough_balance_spec := word_smaller_or_eq _ _).
+              case_eq enough_balance_spec.
+              { (* enough balance *)
+                intro enough_balance_spec_t.
+                intro H.
+                inversion H; subst.
+                clear H.
+                eexists.
+                eexists.
+                eexists.
+                split.
+                {
+                  intro s.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  cbn.
+                  assert (Q : word_smaller 13%Z 256%Z = true) by admit.
+                  rewrite Q.
+                  cbn.
+                  unfold datasize.
+                  cbn.
+                  set (e0 := ZModulo.eq0 _ _).
+                  assert (R : e0 = false) by admit.
+                  rewrite R.
+                  unfold N_of_word.
+                  cbn.
+                  unfold ZModulo.to_Z.
+                  unfold ZModulo.wB.
+                  simpl.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  simpl.
+                  assert (Z : word_iszero (callenv_value callenv) = true) by admit.
+                  rewrite Z.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  cbn.
+                  set (ws := word_smaller 64%Z 256%Z).
+                  compute in ws.
+                  unfold ws.
+                  clear ws.
+                  cbn.
+                  unfold datasize.
+                  simpl.
+                  set (s64 := word_smaller _ _).
+                  assert (S : s64 = false) by admit.
+                  rewrite S.
+                  simpl.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  cbn.
+                  (** TODO: make this tactic only when immediate *)
+                  (** TODO: use this tactic *)
+                  Ltac compute_word_smaller :=
+                    set (focus := word_smaller _ _);
+                    compute in focus;
+                    unfold focus;
+                    clear focus.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  set (cd := cut_data _ _).
+                  (* TODO: cut_data needs to be defined *)
+                  assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
+                  rewrite cdH.
+                  clear cdH cd.
+                  set (balance_smaller := word_smaller _ _).
+                  assert (F : balance_smaller = false)by admit (* use enough_balance_spec *).
+                  rewrite F.
+                  clear F.
+                  right.
+                  f_equal.
+                  f_equal.
+                  (* TODO: many problems to solve
+                   * gaslimit is different from spec to code
+                   * the data interpretation is different in spec and in code.
+                   *)
+                  f_equal; admit.
+                }
+                { admit. (* waiting for above *)
+                }
               }
-              {
-                (* This can be solved only after above *)
-                admit.
+              { (* not enough balance *)
+                intro not_enough_spec.
+                intro H.
+                inversion H; subst.
+                clear H.
+
+                eexists.
+                eexists.
+                eexists.
+                split.
+                {
+                  intro s.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  cbn.
+                  assert (Q : word_smaller 13%Z 256%Z = true) by admit.
+                  rewrite Q.
+                  cbn.
+                  unfold datasize.
+                  cbn.
+                  set (e0 := ZModulo.eq0 _ _).
+                  assert (R : e0 = false) by admit.
+                  rewrite R.
+                  unfold N_of_word.
+                  cbn.
+                  unfold ZModulo.to_Z.
+                  unfold ZModulo.wB.
+                  simpl.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  simpl.
+                  assert (Z : word_iszero (callenv_value callenv) = true) by admit.
+                  rewrite Z.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  cbn.
+                  set (ws := word_smaller 64%Z 256%Z).
+                  compute in ws.
+                  unfold ws.
+                  clear ws.
+                  cbn.
+                  unfold datasize.
+                  simpl.
+                  set (s64 := word_smaller _ _).
+                  assert (S : s64 = false) by admit.
+                  rewrite S.
+                  simpl.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
+                  set (cd := cut_data _ _).
+                  (* TODO: cut_data needs to be defined *)
+                  assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
+                  rewrite cdH.
+                  clear cdH cd.
+                  set (balance_smaller := word_smaller _ _).
+                  assert (A : balance_smaller = true) by admit.
+                  rewrite A.
+                  right.
+                  eauto.
+                }
+                {
+
+                  (* This one should be now ready *)
+                  admit.
+                }
               }
             }
             {
@@ -1591,7 +1683,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                 set (zero_cond := ZModulo.eq0 _ _ ).
                 assert (Zf : zero_cond = false) by admit.
                 rewrite Zf.
-                (* something wrong is happening *)
+                (* something wrong is happening, so this should contradict? *)
+
 
                 admit.
               }
@@ -1619,3 +1712,8 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Admitted.
 
 End ExamplesOnConcreteWord.
+
+(* TODO: currently,
+   lack of balance is treated in the semantics, but lack of gas is not.
+   This discrepancy needs to be solved.
+*)

@@ -186,6 +186,7 @@ Fixpoint specification_run (w : world) (r : response_to_world) : history :=
 
 Inductive instruction :=
 | PUSH1 : word -> instruction
+| PUSH2 : word -> instruction
 | SLOAD
 | SSTORE
 | JUMP
@@ -553,6 +554,11 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   match i with
   | PUSH1 w =>
     if word_smaller w (word_of_N 256%N) then
+      stack_0_1_op v c w
+    else
+      InstructionInvalid
+  | PUSH2 w =>
+    if word_smaller w (word_mul (word_of_N 256%N) (word_of_N 256%N)) then
       stack_0_1_op v c w
     else
       InstructionInvalid
