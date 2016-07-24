@@ -27,6 +27,7 @@ Module Type Word.
   Parameter byte : Type.
   Parameter address : Type.
   Parameter address_of_word : word -> address.
+  Parameter address_eq : address -> address -> bool.
 
   Parameter word_nth_byte : word -> nat -> byte.
 

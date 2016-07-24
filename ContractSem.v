@@ -254,7 +254,10 @@ Record variable_env :=
 (* [update_balance adr v original] is similar to [original] except
    that [adr] is mapped to [v].
 *)
-Axiom update_balance : address -> word -> (address -> word) -> (address -> word).
+Definition update_balance (a : address) (newbal : word)
+           (orig : address -> word) : (address -> word) :=
+  fun (query : address) =>
+    if address_eq a query then newbal else orig query.
 
 Record constant_env :=
   { cenv_program : list instruction;

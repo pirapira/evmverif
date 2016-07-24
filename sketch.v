@@ -608,6 +608,9 @@ Module ConcreteWord <: Word.
 
   Definition address_of_word (w : word) : address := w.
 
+  Definition address_eq a b :=
+    match ZnZ.compare a b with Eq => true | _ => false end.
+
   Definition word_nth_byte (w : word) (n : nat) : byte :=
     ByteOfWord w n.
 
@@ -1422,7 +1425,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                             (storage_store 0%Z new_income
                                (ST.empty word)))) by admit.
             rewrite II.
-            (* TODO: after fixing prev proofs, come here *)
+            (* TODO:
+                need a definition for update_balance
+                after fixing prev proofs, come here *)
             admit.
             (* eapply IH. *)
           }
