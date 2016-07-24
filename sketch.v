@@ -395,6 +395,17 @@ Proof.
 (* TODO: prove *)
 Admitted.
 
+Lemma addK :
+  forall a b, ZModulo.sub (ZModulo.add a b) b = a.
+Proof.
+(* TODO: prove *)
+Admitted.
+
+Lemma addC (* This lemma should not enter Word. *) :
+  forall a b, ZModulo.add a b = ZModulo.add b a.
+Proof.
+(* TODO: prove *)
+Admitted.
 
 Module ConcreteWord <: Word.
 
@@ -1389,9 +1400,17 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         simpl.
         unfold update_balance.
         rewrite address_eq_refl.
-
-        (* TODO: need some condition on callenv_balance... account_state needs balance, maybe. *)
-        admit.
+        unfold counter_wallet_storage.
+        set (spend := storage_load 1%Z _).
+        (* TODO: a geneeral lemma is needed here *)
+        assert (spendH : spend = spending_sofar) by admit.
+        rewrite spendH.
+        set (income := storage_load 0%Z _).
+        assert (incomeH : income = income_sofar) by admit.
+        rewrite incomeH.
+        rewrite !addsub.
+        rewrite addK.
+        apply addC.
       }
       {
         intro I.
@@ -1450,7 +1469,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             rewrite II.
             unfold update_balance.
             set (eq_xx := address_eq _ _).
-            assert (XX: eq_xx = true) by admit.
+            assert (XX: eq_xx = true) by apply address_eq_refl.
             rewrite XX.
             rewrite addsub.
             eapply IH.
