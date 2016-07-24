@@ -1350,16 +1350,16 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         PUSH1 (0%Z) (* out size *) ::
           PUSH1 (0%Z) (* in offset *) ::
             PUSH1 (0%Z) (* in size *) ::
-              PUSH1 (0%Z) ::
-              CALLDATALOAD (* addr loaded *) ::
-                PUSH1 (32%Z) ::
-                CALLDATALOAD (* value loaded *) ::
+              PUSH1 (32%Z) ::
+              CALLDATALOAD (* value loaded *) ::
                 DUP1 ::
                   PUSH1 (1%Z) ::
                     SLOAD ::
                     ADD ::
                   PUSH1 (1%Z) ::
                     SSTORE ::
+                PUSH1 (0%Z) ::
+                CALLDATALOAD (* addr loaded *) ::
                 PUSH2 (30000%Z) ::
                   CALL ::
       ISZERO ::
@@ -1563,6 +1563,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   compute_word_smaller; cbn.
                   compute_word_smaller; cbn.
                   compute_word_smaller; cbn.
+                  compute_word_smaller; cbn.
                   set (cd := cut_data _ _).
                   (* TODO: cut_data needs to be defined *)
                   assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
@@ -1575,11 +1576,21 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   right.
                   f_equal.
                   f_equal.
-                  (* TODO: many problems to solve
-                   * gaslimit is different from spec to code
-                   * the data interpretation is different in spec and in code.
-                   *)
-                  f_equal; admit.
+                  f_equal.
+                  {
+                    (* TODO: cut_data needs to be defined *)
+                    admit.
+                  }
+                  { (* TODO: cut_data needs to be defined *)
+                    admit.
+                  }
+                  { (* why? *)
+                    admit.
+                  }
+                  {
+                    (* TODO: need to define cut_memory *)
+                    admit.
+                  }
                 }
                 { admit. (* waiting for above *)
                 }
