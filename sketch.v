@@ -1704,23 +1704,36 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                 repeat (case s as [| s]; [ solve [left; auto] | ]).
                 cbn.
                 unfold plus_size_label.
-                assert (E : word_smaller 13%Z 256%Z = true).
-                {
-                  compute; auto.
-                }
-                rewrite E.
-                cbn.
+                compute_word_smaller; cbn.
                 unfold datasize.
+                cbn.
                 set (zero_cond := ZModulo.eq0 _ _ ).
                 assert (Zf : zero_cond = false) by admit.
                 rewrite Zf.
-                (* something wrong is happening, so this should contradict? *)
-
-
-                admit.
+                cbn.
+                simpl.
+                repeat (case s as [| s]; [ solve [left; auto] | ]).
+                cbn.
+                compute_word_smaller.
+                cbn.
+                set (z_cond := ZModulo.eq0 _ _).
+                assert (Zt : z_cond = true) by admit.
+                rewrite Zt.
+                repeat (case s as [| s]; [ solve [left; auto] | ]).
+                cbn.
+                compute_word_smaller; cbn.
+                compute_word_smaller; cbn.
+                unfold datasize.
+                cbn.
+                set (small := word_smaller _ 64%Z).
+                assert (SS : small = true) by admit.
+                rewrite SS.
+                simpl.
+                right.
+                eauto.
               }
               {
-                (* need to solve the previous goal first *)
+                (* ready to be solved *)
                 admit.
               }
             }
