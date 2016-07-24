@@ -1756,12 +1756,28 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
               repeat (case s as [| s]; [ solve [left; auto] | ]).
               cbn; compute_word_smaller.
               cbn.
-              (* use bl_eq *)
-              admit.
+              unfold datasize.
+              cbn.
+              set (e0 := ZModulo.eq0 _ _).
+              assert (E0 : e0 = false) by admit (* an extra assumption that data is not as long as 2^256 is needed*).
+              rewrite E0.
+              simpl.
+              repeat (case s as [| s]; [ solve [left; auto] | ]).
+              cbn.
+              compute_word_smaller; cbn.
+              set (v0 := ZModulo.eq0 _ _).
+              assert (V0 : v0 = false) by admit.
+              rewrite V0.
+              cbn.
+              right. (* TODO: maybe name a constructor *)
+              eauto.
             }
             {
-              (* wait till existential variables are instantiated above *)
-              admit.
+                unfold update_account_state.
+                cbn.
+                unfold update_balance.
+                rewrite address_eq_refl.
+                apply counter_wallet_correct.
             }
           }
         }
