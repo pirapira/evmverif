@@ -1681,9 +1681,11 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   eauto.
                 }
                 {
-
-                  (* This one should be now ready *)
-                  admit.
+                  simpl.
+                  unfold counter_wallet_account_state in counter_wallet_correct.
+                  unfold update_balance.
+                  rewrite address_eq_refl.
+                  apply counter_wallet_correct.
                 }
               }
             }

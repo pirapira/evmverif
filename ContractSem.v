@@ -660,7 +660,14 @@ Definition build_venv_called (a : account_state) (env : call_env) :
       venv_value_sent := env.(callenv_value) ;
       venv_data_sent := env.(callenv_data) ;
       venv_storage_at_call := a.(account_storage) ;
-      venv_balance_at_call := env.(callenv_balance)
+      venv_balance_at_call :=
+        (* although there shouldn't be an update,
+         * the environment cannot change the account's balance.
+         * this 'update_balance' should be a NO-OP
+         *)
+        update_balance a.(account_address)
+                           a.(account_balance)
+                           env.(callenv_balance) ;
    |}.
 
 Arguments build_venv_called a env /.
