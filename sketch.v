@@ -1351,7 +1351,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           PUSH1 (0%Z) (* in offset *) ::
             PUSH1 (0%Z) (* in size *) ::
               PUSH1 (32%Z) ::
-              CALLDATALOAD (* value loaded *) ::
+                CALLDATALOAD (* value loaded *) ::
                 DUP1 ::
                   PUSH1 (1%Z) ::
                     SLOAD ::
@@ -1359,9 +1359,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   PUSH1 (1%Z) ::
                     SSTORE ::
                 PUSH1 (0%Z) ::
-                CALLDATALOAD (* addr loaded *) ::
-                PUSH2 (30000%Z) ::
-                  CALL ::
+                  CALLDATALOAD (* addr loaded *) ::
+                  PUSH2 (30000%Z) ::
+                    CALL ::
       ISZERO ::
       PUSH1 word_zero ::
         JUMPI ::
@@ -1564,11 +1564,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   compute_word_smaller; cbn.
                   compute_word_smaller; cbn.
                   compute_word_smaller; cbn.
-                  set (cd := cut_data _ _).
-                  (* TODO: cut_data needs to be defined *)
-                  assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
-                  rewrite cdH.
-                  clear cdH cd.
                   set (balance_smaller := word_smaller _ _).
                   assert (F : balance_smaller = false)by admit (* use enough_balance_spec *).
                   rewrite F.
@@ -1584,7 +1579,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   { (* TODO: cut_data needs to be defined *)
                     admit.
                   }
-                  { (* why? *)
+                  { (* TODO: cut_data needs to be defined *)
                     admit.
                   }
                   {
