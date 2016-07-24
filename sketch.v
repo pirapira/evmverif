@@ -1504,18 +1504,55 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                 unfold datasize.
                 cbn.
                 set (e0 := ZModulo.eq0 _ _).
-                assert (R : e0 = true) by admit.
+                assert (R : e0 = false) by admit.
                 rewrite R.
+                unfold N_of_word.
+                cbn.
+                unfold ZModulo.to_Z.
+                unfold ZModulo.wB.
+                simpl.
+                repeat (case s as [| s]; [ solve [left; auto] | ]).
+                simpl.
+                assert (Z : word_iszero (callenv_value callenv) = true) by admit.
+                rewrite Z.
                 repeat (case s as [| s]; [ solve [left; auto] | ]).
                 cbn.
-                set (sm := word_smaller _ _).
-                assert (S : sm = true) by admit.
-                rewrite S.
+                set (ws := word_smaller 64%Z 256%Z).
+                compute in ws.
+                unfold ws.
+                clear ws.
                 cbn.
-                fold sm.
+                unfold datasize.
+                simpl.
+                set (s64 := word_smaller _ _).
+                assert (S : s64 = false) by admit.
                 rewrite S.
+                simpl.
+                repeat (case s as [| s]; [ solve [left; auto] | ]).
                 cbn.
-                (* TODO: program returned!  although expected to call! *)
+                (** TODO: make this tactic only when immediate *)
+                (** TODO: use this tactic *)
+                Ltac compute_word_smaller :=
+                  set (focus := word_smaller _ _);
+                  compute in focus;
+                  unfold focus;
+                  clear focus.
+                compute_word_smaller; cbn.
+                compute_word_smaller; cbn.
+                compute_word_smaller; cbn.
+                compute_word_smaller; cbn.
+                compute_word_smaller; cbn.
+                compute_word_smaller; cbn.
+                compute_word_smaller; cbn.
+                compute_word_smaller; cbn.
+                compute_word_smaller; cbn.
+                set (cd := cut_data _ _).
+                (* TODO: cut_data needs to be defined *)
+                assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
+                rewrite cdH.
+                (* Oh, the implementation might fail, but the spec says send something *)
+                (* TODO: need to change the spec *)
+
                 admit.
               }
               {
