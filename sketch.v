@@ -1593,7 +1593,12 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                     admit.
                   }
                 }
-                { admit. (* now ready to be pursued *)
+                {
+                  cbn.
+                  unfold cut_data.
+                  cbn.
+                  (* spec says nil, but actually a call is pushed *)
+                  admit.
                 }
               }
               { (* not enough balance *)
