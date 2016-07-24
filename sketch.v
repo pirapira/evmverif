@@ -1733,12 +1733,15 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                 eauto.
               }
               {
-                (* ready to be solved *)
-                admit.
+                unfold update_account_state.
+                cbn.
+                unfold update_balance.
+                rewrite address_eq_refl.
+                apply counter_wallet_correct.
               }
             }
           }
-          { (* sent value is not zero *)
+          { (* sent value is not zero, and data is also sent; should fail *)
             (* I can just imagine this needs the definition of datasize, too *)
             admit.
           }
@@ -1746,11 +1749,11 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       }
     }
     {
-      (* this does not make sense until the call stack is non-empty *)
+      (* Now this goal does make sense *)
       admit.
     }
     {
-      (* this does not make sense until the call stack is non-empty *)
+      (* Now this goal does make sense *)
       admit.
     }
   Admitted.
