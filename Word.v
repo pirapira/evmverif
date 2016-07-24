@@ -10,6 +10,7 @@ Module Type Word.
   Parameter word_iszero : word -> bool.
   (* TODO: state correctness of word_iszero *)
   Parameter word_smaller : word -> word -> bool.
+  Parameter word_smaller_or_eq : word -> word -> bool.
   Parameter word_of_N : N -> word.
   Parameter N_of_word : word -> N.
 

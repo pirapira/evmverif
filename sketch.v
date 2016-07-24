@@ -466,6 +466,9 @@ Module ConcreteWord <: Word.
   Definition word_smaller a b :=
     match ZnZ.compare a b with Lt => true | _ => false end.
 
+  Definition word_smaller_or_eq a b :=
+    match ZnZ.compare a b with Lt => true | Eq => true | Gt => false end.
+
   Definition word_of_N := Z.of_N.
 
   Definition N_of_word w := Z.to_N (ZnZ.to_Z w).
@@ -1266,7 +1269,10 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
              if Nat.leb 64 (List.length cenv.(callenv_data)) then
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
-               sending_action addr value (counter_wallet income_sofar (word_add spending_sofar value))
+               if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
+                 sending_action addr value (counter_wallet income_sofar (word_add spending_sofar value))
+               else
+                 failing_action (counter_wallet income_sofar spending_sofar)
              else
                failing_action (counter_wallet income_sofar spending_sofar)
            else
