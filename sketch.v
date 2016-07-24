@@ -386,6 +386,16 @@ Require Import Coq.Lists.List.
   Require Cyclic.ZModulo.ZModulo.
 
 
+(* A useful lemma to be proven *)
+Lemma addsub :
+  forall x y z,
+    ZModulo.add (ZModulo.sub x y) z =
+    ZModulo.sub (ZModulo.add x z) y.
+Proof.
+(* TODO: prove *)
+Admitted.
+
+
 Module ConcreteWord <: Word.
 
   Module WLEN <: Cyclic.ZModulo.ZModulo.PositiveNotOne.
@@ -610,6 +620,16 @@ Module ConcreteWord <: Word.
 
   Definition address_eq a b :=
     match ZnZ.compare a b with Eq => true | _ => false end.
+
+  Lemma address_eq_refl :
+    forall a, address_eq a a = true.
+  Proof.
+    intro a.
+    unfold address_eq.
+    rewrite ZnZ.spec_compare.
+    rewrite Z.compare_refl.
+    reflexivity.
+  Qed.
 
   Definition word_nth_byte (w : word) (n : nat) : byte :=
     ByteOfWord w n.
@@ -1367,6 +1387,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       {
         unfold counter_wallet_invariant.
         simpl.
+        unfold update_balance.
+        rewrite address_eq_refl.
+
         (* TODO: need some condition on callenv_balance... account_state needs balance, maybe. *)
         admit.
       }
@@ -1425,11 +1448,12 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                             (storage_store 0%Z new_income
                                (ST.empty word)))) by admit.
             rewrite II.
-            (* TODO:
-                need a definition for update_balance
-                after fixing prev proofs, come here *)
-            admit.
-            (* eapply IH. *)
+            unfold update_balance.
+            set (eq_xx := address_eq _ _).
+            assert (XX: eq_xx = true) by admit.
+            rewrite XX.
+            rewrite addsub.
+            eapply IH.
           }
         }
         { (* input data is not nil *)

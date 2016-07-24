@@ -28,6 +28,7 @@ Module Type Word.
   Parameter address : Type.
   Parameter address_of_word : word -> address.
   Parameter address_eq : address -> address -> bool.
+  Parameter address_eq_refl : forall (a : address), address_eq a a = true.
 
   Parameter word_nth_byte : word -> nat -> byte.
 
