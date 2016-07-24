@@ -608,6 +608,8 @@ Fixpoint program_sem (v : variable_env) (c :constant_env) (steps : nat)
           program_sem new_v c remaining_steps
         | InstructionToWorld ContractFail opt_pushed_v =>
           ProgramToWorld ContractFail v.(venv_storage_at_call) v.(venv_balance_at_call) opt_pushed_v
+        | InstructionToWorld (ContractCall args) (Some new_v) =>
+          ProgramToWorld (ContractCall args) new_v.(venv_storage) new_v.(venv_balance) (Some new_v)
         | InstructionToWorld a opt_pushed_v =>
           ProgramToWorld a v.(venv_storage) v.(venv_balance) opt_pushed_v
         (* TODO: change the balance when suicide *)
