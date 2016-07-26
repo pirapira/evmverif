@@ -392,20 +392,27 @@ Lemma addsub :
     ZModulo.add (ZModulo.sub x y) z =
     ZModulo.sub (ZModulo.add x z) y.
 Proof.
-(* TODO: prove *)
-Admitted.
+  unfold ZModulo.add.
+  unfold ZModulo.sub.
+  intros ? ? ?.
+  omega.
+Qed.
+
 
 Lemma addK :
   forall a b, ZModulo.sub (ZModulo.add a b) b = a.
 Proof.
-(* TODO: prove *)
-Admitted.
+  unfold ZModulo.add.
+  unfold ZModulo.sub.
+  intros ? ?; omega.
+Qed.
 
 Lemma addC (* This lemma should not enter Word. *) :
   forall a b, ZModulo.add a b = ZModulo.add b a.
 Proof.
-(* TODO: prove *)
-Admitted.
+  unfold ZModulo.add.
+  intros ? ?; omega.
+Qed.
 
 Module ConcreteWord <: Word.
 
