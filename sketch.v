@@ -385,7 +385,6 @@ Require Import Coq.Lists.List.
   Require BinNums.
   Require Cyclic.ZModulo.ZModulo.
 
-
 (* A useful lemma to be proven *)
 Lemma addsub :
   forall x y z,
@@ -756,6 +755,14 @@ Module ExamplesOnConcreteWord.
 
   Module ConcreteSem := (ContractSem.Make ConcreteWord).
   Include ConcreteSem.
+
+  (** TODO: make this tactic only when immediate *)
+  (** TODO: use this tactic *)
+  Ltac compute_word_smaller :=
+    set (focus := word_smaller _ _);
+    compute in focus;
+    unfold focus;
+    clear focus.
 
   Definition example2_program : program :=
     PUSH1 (word_of_N 0) ::
@@ -1451,12 +1458,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             cbn.
             repeat (case s as [| s]; [ solve [left; auto] | ]).
             cbn.
-            set (smaller0 := word_smaller ZModulo.zero _).
-            assert (s00 : smaller0 = true) by admit.
-            rewrite s00.
+            compute_word_smaller.
             cbn.
-            unfold smaller0 in s00.
-            rewrite s00.
+            compute_word_smaller.
             cbn.
             right.
             reflexivity.
@@ -1483,9 +1487,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                                (ST.empty word)))) by admit.
             rewrite II.
             unfold update_balance.
-            set (eq_xx := address_eq _ _).
-            assert (XX: eq_xx = true) by apply address_eq_refl.
-            rewrite XX.
+            rewrite address_eq_refl.
             rewrite addsub.
             eapply IH.
           }
@@ -1538,10 +1540,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   rewrite Z.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
-                  set (ws := word_smaller 64%Z 256%Z).
-                  compute in ws.
-                  unfold ws.
-                  clear ws.
+                  compute_word_smaller.
                   cbn.
                   unfold datasize.
                   simpl.
@@ -1551,13 +1550,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
-                  (** TODO: make this tactic only when immediate *)
-                  (** TODO: use this tactic *)
-                  Ltac compute_word_smaller :=
-                    set (focus := word_smaller _ _);
-                    compute in focus;
-                    unfold focus;
-                    clear focus.
                   compute_word_smaller; cbn.
                   compute_word_smaller; cbn.
                   compute_word_smaller; cbn.
