@@ -1783,6 +1783,20 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     }
     {
       (* Now this goal does make sense *)
+      (* TODO: maybe try to see the required condition here? *)
+      unfold respond_to_return_correctly.
+      intros rr venv cont act.
+      intro venvH.
+      split.
+      {
+        (* prove the invariant *)
+        admit.
+      }
+      intro inv.
+      intro H.
+      inversion H; subst.
+      clear H.
+      (* TODO: define a property that implies this goal *)
       admit.
     }
     {
