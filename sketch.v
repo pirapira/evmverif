@@ -1374,7 +1374,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     nil.
 
 
-  (* TODO: I think I need to change the order of arguments of storage_load *)
   Definition counter_wallet_invariant (v : variable_env) (c : constant_env) : Prop :=
       word_add (v.(venv_balance) c.(cenv_this)) (storage_load 1%Z v.(venv_storage))
     = word_add v.(venv_value_sent) (storage_load 0%Z v.(venv_storage)).
