@@ -223,6 +223,8 @@ Function drop_bytes (prog : list instruction) (bytes : N)
   | _, N0 => prog
   | PUSH1 v :: tl, _ =>
     drop_bytes tl (bytes - 2)
+  | PUSH2 v :: tl, _ =>
+    drop_bytes tl (bytes - 3)
   | _ :: tl, _ =>
     drop_bytes tl (bytes - 1)
   | nil, _ => nil
