@@ -1401,8 +1401,20 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     |}
     .
 
+  Definition counter_wallet_calling_state (v : variable_env) :=
+    v.(venv_prg_sfx) =
+      ISZERO ::
+      PUSH1 word_zero ::
+        JUMPI ::
+    STOP ::
+    nil.
+
+  Definition all_cw_calling_state lst :=
+    forall v, In v lst -> counter_wallet_calling_state v.
+
   Theorem counter_wallet_correct :
     forall (income_sofar spending_sofar : word) ongoing,
+      all_cw_calling_state ongoing ->
       account_state_responds_to_world
         (counter_wallet_account_state income_sofar spending_sofar ongoing)
         (counter_wallet income_sofar spending_sofar)
@@ -1410,7 +1422,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     (* TODO: strengthen the statement so that coinduction goes through. *)
   Proof.
     cofix.
-    intros income_sofar spending_sofar ongoing.
+    intros income_sofar spending_sofar ongoing ongoingH.
     rewrite counter_wallet_def.
     apply AccountStep.
     {
@@ -1490,6 +1502,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             rewrite address_eq_refl.
             rewrite addsub.
             eapply IH.
+            assumption.
           }
         }
         { (* input data is not nil *)
@@ -1598,9 +1611,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   unfold counter_wallet_account_state in counter_wallet_correct.
                   set (new_storage := storage_store _ _ _).
                   set (new_ongoing := _ :: ongoing).
-                  generalize new_ongoing.
-                  clear new_ongoing.
-                  intro new_ongoing.
                   unfold update_balance.
                   rewrite address_eq_refl.
                   set (new_balance := if (_ : bool) then _ else _).
@@ -1610,6 +1620,19 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   assert (B : new_balance = word_sub income_sofar new_sp) by admit.
                   rewrite B.
                   apply (counter_wallet_correct income_sofar new_sp).
+                  unfold new_ongoing.
+                  unfold all_cw_calling_state.
+                  intros elm elmH.
+                  apply in_inv in elmH.
+                  case elmH.
+                  {
+                    intro K.
+                    rewrite <-K.
+                    reflexivity.
+                  }
+                  {
+                    apply ongoingH.
+                  }
                 }
               }
               { (* not enough balance *)
@@ -1684,6 +1707,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   unfold update_balance.
                   rewrite address_eq_refl.
                   apply counter_wallet_correct.
+                  assumption.
                 }
               }
             }
@@ -1736,6 +1760,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                 unfold update_balance.
                 rewrite address_eq_refl.
                 apply counter_wallet_correct.
+                assumption.
               }
             }
           }
@@ -1760,6 +1785,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
               assert (E0 : e0 = false) by admit (* an extra assumption that data is not as long as 2^256 is needed*).
               rewrite E0.
               simpl.
+              (* TODO: define a lemma so that just proving something for a large s is enough *)
               repeat (case s as [| s]; [ solve [left; auto] | ]).
               cbn.
               compute_word_smaller; cbn.
@@ -1776,6 +1802,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                 unfold update_balance.
                 rewrite address_eq_refl.
                 apply counter_wallet_correct.
+                assumption.
             }
           }
         }
