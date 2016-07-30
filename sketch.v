@@ -1085,6 +1085,17 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Definition all_cw_calling_state lst :=
     forall v, In v lst -> counter_wallet_calling_state v.
 
+  Lemma all_cw_calling_state_tail :
+    forall head tail,
+      all_cw_calling_state (head :: tail) ->
+      all_cw_calling_state tail.
+  Proof.
+    intros head tail H elm Hin.
+    apply H.
+    apply in_cons.
+    auto.
+  Qed.
+
   Theorem counter_wallet_correct :
     forall (income_sofar spending_sofar : word) ongoing,
       all_cw_calling_state ongoing ->
@@ -1537,13 +1548,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         }
         rewrite balanceH.
         apply counter_wallet_correct.
-        Lemma all_cw_calling_state_tail :
-          forall head tail,
-            all_cw_calling_state (head :: tail) ->
-            all_cw_calling_state tail.
-        Proof.
-          (* TODO: prove *)
-        Admitted.
         idtac.
         apply all_cw_calling_state_tail in ongoingH.
         assumption.
