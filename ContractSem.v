@@ -815,15 +815,13 @@ Definition respond_to_call_correctly c a I account_state_responds_to_world :=
                                           continuation I)).
 
 Definition respond_to_return_correctly (r : return_result -> contract_behavior)
-           (a : account_state) I
+           (a : account_state) (I :variable_env -> constant_env -> Prop)
            account_state_responds_to_world :=
   forall (rr : return_result) venv continuation act,
      Some venv = build_venv_returned a rr ->
-     I venv (build_cenv a) /\
-     (I venv (build_cenv a) ->
      r rr = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
-     (forall steps,
+     ((forall steps,
          program_result_approximate (program_sem venv (build_cenv a) steps)
                                     (ProgramToWorld act st bal pushed_venv))
      /\
@@ -836,8 +834,6 @@ Definition respond_to_fail_correctly (f : contract_behavior)
            account_state_responds_to_world :=
   forall venv continuation act,
      Some venv = build_venv_fail a ->
-     I venv (build_cenv a) /\
-     (I venv (build_cenv a) ->
      f = ContractAction act continuation ->
      exists pushed_venv, exists st, exists bal,
      (forall steps,
@@ -846,7 +842,7 @@ Definition respond_to_fail_correctly (f : contract_behavior)
      /\
     account_state_responds_to_world
       (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
-                                    continuation I).
+                                    continuation I.
 
 
 

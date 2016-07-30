@@ -843,8 +843,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         intro H.
         inversion H; subst.
         clear H.
-        split; [ solve [auto] | ].
-        intros _ act_cont_eq.
+        intros act_cont_eq.
         eexists.
         eexists.
         eexists.
@@ -880,8 +879,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         intro venvH.
         inversion venvH; subst.
         clear venvH.
-        split; [ solve [auto] | ].
-        intros _ act_cont_H.
+        intros act_cont_H.
         inversion act_cont_H; subst.
         clear act_cont_H.
         eexists.
@@ -1502,13 +1500,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       unfold respond_to_return_correctly.
       intros rr venv cont act.
       intro venvH.
-      split.
-      {
-        (* TODO: prove the invariant after making sure the invariant is
-           strong enough.  *)
-        admit.
-      }
-      intro inv.
       intro H.
       inversion H; subst.
       clear H.
