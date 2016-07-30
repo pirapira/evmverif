@@ -43,7 +43,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : nat) :=
   | S O => (* now the callee responds or reenters *)
     Respond
       (fun _ => ContractAction ContractFail (call_but_fail_on_reentrance (S O)))
-      (fun retval => ContractAction (ContractReturn retval) (call_but_fail_on_reentrance O))
+      (fun retval => ContractAction (ContractReturn retval.(return_data)) (call_but_fail_on_reentrance O))
       (ContractAction ContractFail (call_but_fail_on_reentrance O))
   | S (S n) =>
     Respond
@@ -194,7 +194,7 @@ End Example0Continue.
 Section Example1Continue.
 (*** prove that example 1 has an implementation  *)
 
-  Definition return_result_nil : return_result := nil.
+  Definition return_result_nil : list byte := nil.
   Definition action_example_1 :=
     always_return return_result_nil.
 

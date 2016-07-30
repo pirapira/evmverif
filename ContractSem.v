@@ -39,7 +39,13 @@ Record call_arguments :=
 
 (* An element of type [return_result] is a sequence of bytes that
    [RETURN] can return. *)
-Definition return_result := list byte.
+Record return_result :=
+  { return_data : list byte;
+    return_balance : address -> word
+  }.
+
+(* TODO: add something similar to return_balance to
+   failures *)
 
 (* An element of type [call_env] describes
    an environment where contract is executed
@@ -67,7 +73,7 @@ Inductive contract_action :=
   (* [Fail] is the behavior of runtime errors (e.g. jumping to an invalid
      program counter / lack of gas *)
 | ContractSuicide : contract_action
-| ContractReturn : return_result (* returned data *) -> contract_action.
+| ContractReturn : list byte (* returned data *) -> contract_action.
   (* [Return ret next] is the behavior of a [RETURN], [STOP] instruction.
      Upon the next call with [env], [next env] will be the contract behavior.
    *)
@@ -299,7 +305,7 @@ Inductive instruction_result :=
 Definition instruction_failure_result :=
   InstructionToWorld ContractFail None.
 
-Definition instruction_return_result (x: return_result) :=
+Definition instruction_return_result (x: list byte) :=
   InstructionToWorld (ContractReturn x) None.
 
 
@@ -318,6 +324,20 @@ Definition venv_update_stack (new_stack : list word) (v : variable_env) :=
   |}.
 
 Arguments venv_update_stack new_stack v /.
+
+Definition venv_update_balance (new_balance : address -> word) (v : variable_env) :=
+  {|
+    venv_stack := v.(venv_stack) ;
+    venv_memory := v.(venv_memory) ;
+    venv_storage := v.(venv_storage) ;
+    venv_prg_sfx := v.(venv_prg_sfx) ;
+    venv_balance := new_balance ;
+    venv_caller := v.(venv_caller) ;
+    venv_value_sent := v.(venv_value_sent) ;
+    venv_data_sent := v.(venv_data_sent) ;
+    venv_storage_at_call := v.(venv_storage_at_call) ;
+    venv_balance_at_call := v.(venv_balance_at_call)
+  |}.
 
 Definition venv_advance_pc (v : variable_env) :=
   {|
@@ -378,6 +398,21 @@ Definition venv_update_storage (addr : word) (val : word) (v : variable_env)
     venv_stack := v.(venv_stack) ;
     venv_memory := v.(venv_memory);
     venv_storage := storage_store addr val v.(venv_storage);
+    venv_prg_sfx := v.(venv_prg_sfx);
+    venv_balance := v.(venv_balance);
+    venv_caller := v.(venv_caller);
+    venv_value_sent := v.(venv_value_sent);
+    venv_data_sent := v.(venv_data_sent);
+    venv_storage_at_call := v.(venv_storage_at_call) ;
+    venv_balance_at_call := v.(venv_balance_at_call)
+  |}.
+
+Definition venv_update_whole_storage (new_storage : storage) (v : variable_env)
+           : variable_env :=
+  {|
+    venv_stack := v.(venv_stack) ;
+    venv_memory := v.(venv_memory);
+    venv_storage := new_storage;
     venv_prg_sfx := v.(venv_prg_sfx);
     venv_balance := v.(venv_balance);
     venv_caller := v.(venv_caller);
@@ -541,10 +576,12 @@ Definition venv_returned_bytes v :=
 Arguments venv_returned_bytes v /.
 
 Definition ret (v : variable_env) (c : constant_env) : instruction_result :=
-  InstructionToWorld (ContractReturn (venv_returned_bytes v)) None.
+  InstructionToWorld (ContractReturn (venv_returned_bytes v) )
+                     None.
 
 Definition stop (v : variable_env) (c : constant_env) : instruction_result :=
-  InstructionToWorld (ContractReturn nil) None.
+  InstructionToWorld (ContractReturn nil)
+                     None.
 
 Definition pop (v : variable_env) (c : constant_env) : instruction_result :=
   InstructionContinue
@@ -689,7 +726,12 @@ Definition build_venv_returned
   match a.(account_ongoing_calls) with
   | nil => None
   | recovered :: _ =>
-    Some (venv_update_stack (word_one :: recovered.(venv_stack)) recovered)
+    Some
+      (venv_update_whole_storage a.(account_storage)
+      (venv_update_balance
+         (update_balance a.(account_address) a.(account_balance) r.(return_balance))
+      (venv_update_stack (word_one :: recovered.(venv_stack))
+                         recovered)))
          (* TODO: actually, need to update the memory *)
   end.
 

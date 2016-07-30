@@ -1537,26 +1537,18 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       {
         unfold update_account_state.
         unfold counter_wallet_account_state in counter_wallet_correct.
+        unfold account_state_update_storage.
         simpl.
-        assert (storageH : venv_storage recovered = counter_wallet_storage income_sofar spending_sofar).
-        {
-          (* TODO: add an invariant to support this *)
-          (* venv_storage recovered =
-             counter_wallet_storage income_sofar spending_sofar
-           *)
 
-          admit.
-        }
-        rewrite storageH.
-        assert (balanceH : venv_balance recovered counter_wallet_address =
-                           word_sub income_sofar spending_sofar).
-        {
-          (* TODO: add an invariant to support this *)
-          admit.
-        }
-        rewrite balanceH.
+        Lemma get_update_balance :
+          forall addr value original,
+            update_balance addr value original addr = value.
+        Proof.
+        Admitted.
+        rewrite get_update_balance.
         apply counter_wallet_correct.
-        idtac.
+
+
         apply all_cw_calling_state_tail in ongoingH.
         assumption.
       }
