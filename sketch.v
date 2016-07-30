@@ -1074,13 +1074,16 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
     |}
     .
 
-  Definition counter_wallet_calling_state (v : variable_env) :=
-    v.(venv_prg_sfx) =
-      ISZERO ::
-      PUSH1 word_zero ::
-        JUMPI ::
-    STOP ::
-    nil.
+  Record counter_wallet_calling_state (v : variable_env) :=
+    {
+      cw_calling_prg_sfx :
+        (v.(venv_prg_sfx) =
+         ISZERO ::
+             PUSH1 word_zero ::
+             JUMPI ::
+             STOP ::
+             nil)
+    }.
 
   Definition all_cw_calling_state lst :=
     forall v, In v lst -> counter_wallet_calling_state v.
@@ -1312,6 +1315,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   {
                     intro K.
                     rewrite <-K.
+                    apply Build_counter_wallet_calling_state.
                     reflexivity.
                   }
                   {
@@ -1523,7 +1527,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         unfold all_cw_calling_state in ongoingH.
         assert (CSR : counter_wallet_calling_state recovered)
           by (* TODO: use all_cw_calling_state *) admit.
-        rewrite CSR.
+        rewrite (cw_calling_prg_sfx _ CSR).
         intro s.
         repeat (case s as [| s]; [ solve [left; auto] | ]).
         simpl.
@@ -1537,6 +1541,10 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         assert (storageH : venv_storage recovered = counter_wallet_storage income_sofar spending_sofar).
         {
           (* TODO: add an invariant to support this *)
+          (* venv_storage recovered =
+             counter_wallet_storage income_sofar spending_sofar
+           *)
+
           admit.
         }
         rewrite storageH.
