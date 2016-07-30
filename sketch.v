@@ -1489,15 +1489,65 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       intro venvH.
       split.
       {
-        (* prove the invariant *)
+        (* TODO: prove the invariant after making sure the invariant is
+           strong enough.  *)
         admit.
       }
       intro inv.
       intro H.
       inversion H; subst.
       clear H.
+      unfold build_venv_returned in venvH.
+      unfold counter_wallet_account_state in venvH.
+      cbn in venvH.
+      case ongoing as [| recovered rest_oging]; try congruence.
       (* TODO: define a property that implies this goal *)
-      admit.
+      eexists.
+      eexists.
+      eexists.
+      split.
+      {
+        inversion venvH; subst.
+        clear venvH.
+        unfold all_cw_calling_state in ongoingH.
+        assert (CSR : counter_wallet_calling_state recovered)
+          by (* TODO: use all_cw_calling_state *) admit.
+        rewrite CSR.
+        intro s.
+        repeat (case s as [| s]; [ solve [left; auto] | ]).
+        simpl.
+        right.
+        f_equal.
+        }
+      {
+        unfold update_account_state.
+        unfold counter_wallet_account_state in counter_wallet_correct.
+        simpl.
+        assert (storageH : venv_storage recovered = counter_wallet_storage income_sofar spending_sofar).
+        {
+          (* TODO: add an invariant to support this *)
+          admit.
+        }
+        rewrite storageH.
+        assert (balanceH : venv_balance recovered counter_wallet_address =
+                           word_sub income_sofar spending_sofar).
+        {
+          (* TODO: add an invariant to support this *)
+          admit.
+        }
+        rewrite balanceH.
+        apply counter_wallet_correct.
+        Lemma all_cw_calling_state_tail :
+          forall head tail,
+            all_cw_calling_state (head :: tail) ->
+            all_cw_calling_state tail.
+        Proof.
+          (* TODO: prove *)
+        Admitted.
+        idtac.
+        apply all_cw_calling_state_tail in ongoingH.
+        assumption.
+      }
     }
     {
       (* Now this goal does make sense *)
