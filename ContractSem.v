@@ -268,6 +268,16 @@ Definition update_balance (a : address) (newbal : word)
   fun (query : address) =>
     if address_eq a query then newbal else orig query.
 
+Lemma get_update_balance :
+  forall addr value original,
+    update_balance addr value original addr = value.
+Proof.
+  intros addr value original.
+  unfold update_balance.
+  rewrite address_eq_refl.
+  auto.
+Qed.
+
 Record constant_env :=
   { cenv_program : list instruction;
     cenv_this : address

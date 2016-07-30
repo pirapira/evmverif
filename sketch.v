@@ -1540,11 +1540,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         unfold account_state_update_storage.
         simpl.
 
-        Lemma get_update_balance :
-          forall addr value original,
-            update_balance addr value original addr = value.
-        Proof.
-        Admitted.
         rewrite get_update_balance.
         apply counter_wallet_correct.
 
