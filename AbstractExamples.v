@@ -160,11 +160,19 @@ Section Example0Continue.
         case steps as [ | steps]; [ try left; auto | ].
         case steps as [ | steps]; [ try left; auto | ].
         { simpl.
-          rewrite smaller_word_of_N; auto; compute; auto. }
-        simpl.
-        rewrite smaller_word_of_N; try solve [compute; auto].
-        simpl.
-        rewrite N_of_word_of_N; solve [compute; auto].
+          assert (H : word_mod (word_of_N 0) (word_of_N 256) = word_of_N 0) by admit.
+          rewrite H.
+          simpl.
+          auto.
+          simpl.
+          rewrite N_of_word_of_N.
+          { cbn.
+            right.
+            eauto.
+          }
+          compute.
+          auto.
+        }
       }
       {
         apply example0_spec_impl_match.
@@ -186,7 +194,7 @@ Section Example0Continue.
       simpl.
       congruence.
     }
-  Qed.
+  Admitted.
 
 End Example0Continue.
 
@@ -275,37 +283,21 @@ Section Example1Continue.
       split.
       {
         intro.
-        assert (Z : word_smaller word_zero (word_of_N 256) = true).
+        assert (Z : word_mod word_zero (word_of_N 256) = word_zero).
         {
-          unfold word_zero.
-          rewrite smaller_word_of_N; compute; auto.
+          admit.
         }
         case steps as [|steps]; [left; auto | ].
         case steps as [|steps]; [left; auto | ].
-        {
-          simpl.
-          rewrite Z.
-          auto.
-        }
         case steps as [|steps]; [left; auto | ].
-        { simpl.
-          rewrite Z.
-          simpl.
-          rewrite Z.
-          simpl.
-          auto.
-        }
         unfold action_example_1 in H.
         always_return_tac.
         right.
         simpl.
-        rewrite Z.
-        simpl.
-        rewrite Z.
-        simpl.
         f_equal.
         f_equal.
         simpl.
+        rewrite Z.
         rewrite cut_memory_zero_nil.
         auto.
       }
@@ -325,7 +317,7 @@ Section Example1Continue.
       simpl.
       congruence.
     }
-  Qed.
+  Admitted.
 
 End Example1Continue.
 

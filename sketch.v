@@ -144,6 +144,11 @@ Module ConcreteWord <: Word.
 
   Definition word_iszero := ZnZ.eq0.
 
+  Print ZnZ.
+
+  Definition word_mod := ZnZ.modulo.
+
+
   Definition word_smaller a b :=
     match ZnZ.compare a b with Lt => true | _ => false end.
 
@@ -181,7 +186,6 @@ Module ConcreteWord <: Word.
       vm_compute; auto.
     }
   Qed.
-
 
   Module WordOrdered <: OrderedType.
   (* Before using FSetList as storage,
@@ -433,6 +437,12 @@ Module ExamplesOnConcreteWord.
   (** TODO: use this tactic *)
   Ltac compute_word_smaller :=
     set (focus := word_smaller _ _);
+    compute in focus;
+    unfold focus;
+    clear focus.
+
+  Ltac compute_word_mod :=
+    set (focus := word_mod _ _);
     compute in focus;
     unfold focus;
     clear focus.
@@ -701,6 +711,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           simpl.
           repeat (case s as [| s]; [ solve [left; auto] | ]).
           simpl.
+          compute_word_mod.
 
           set (sm0 := word_smaller _ 0%Z).
 
@@ -727,6 +738,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             apply H.
           }
           rewrite H.
+
           right.
           f_equal.
           rewrite <- contract_action_expander_eq in next at 1.
@@ -815,6 +827,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           repeat (case s as [| s]; [ solve [left; auto] | ]).
 
           simpl.
+          compute_word_mod.
           unfold venv_first_instruction.
           rewrite st_load.
           simpl.
@@ -1148,16 +1161,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             intro s.
             repeat (case s as [| s]; [ solve [left; auto] | ]).
             cbn.
-            assert (E : word_smaller 13%Z 256%Z = true) by (compute; auto).
-            rewrite E.
-            cbn.
             rewrite data_nil.
             cbn.
             repeat (case s as [| s]; [ solve [left; auto] | ]).
-            cbn.
-            compute_word_smaller.
-            cbn.
-            compute_word_smaller.
             cbn.
             right.
             reflexivity.
@@ -1219,9 +1225,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   intro s.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
-                  assert (Q : word_smaller 13%Z 256%Z = true) by admit.
-                  rewrite Q.
-                  cbn.
                   unfold datasize.
                   cbn.
                   set (e0 := ZModulo.eq0 _ _).
@@ -1238,26 +1241,14 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   rewrite Z.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
-                  compute_word_smaller.
-                  cbn.
                   unfold datasize.
-                  simpl.
+                  cbn.
                   set (s64 := word_smaller _ _).
                   assert (S : s64 = false) by admit.
                   rewrite S.
                   simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
                   set (balance_smaller := word_smaller _ _).
                   assert (F : balance_smaller = false)by admit (* use enough_balance_spec *).
                   rewrite F.
@@ -1335,9 +1326,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   intro s.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
-                  assert (Q : word_smaller 13%Z 256%Z = true) by admit.
-                  rewrite Q.
-                  cbn.
                   unfold datasize.
                   cbn.
                   set (e0 := ZModulo.eq0 _ _).
@@ -1354,11 +1342,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   rewrite Z.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
-                  set (ws := word_smaller 64%Z 256%Z).
-                  compute in ws.
-                  unfold ws.
-                  clear ws.
-                  cbn.
                   unfold datasize.
                   simpl.
                   set (s64 := word_smaller _ _).
@@ -1367,16 +1350,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
-                  compute_word_smaller; cbn.
                   set (cd := cut_data _ _).
                   assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
                   rewrite cdH.
@@ -1412,7 +1385,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                 repeat (case s as [| s]; [ solve [left; auto] | ]).
                 cbn.
                 unfold plus_size_label.
-                compute_word_smaller; cbn.
                 unfold datasize.
                 cbn.
                 set (zero_cond := ZModulo.eq0 _ _ ).
@@ -1422,18 +1394,14 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                 simpl.
                 repeat (case s as [| s]; [ solve [left; auto] | ]).
                 cbn.
-                compute_word_smaller.
-                cbn.
                 set (z_cond := ZModulo.eq0 _ _).
                 assert (Zt : z_cond = true) by admit.
                 rewrite Zt.
                 repeat (case s as [| s]; [ solve [left; auto] | ]).
                 cbn.
-                compute_word_smaller; cbn.
-                compute_word_smaller; cbn.
                 unfold datasize.
                 cbn.
-                set (small := word_smaller _ 64%Z).
+                set (small := word_smaller _ _).
                 assert (SS : small = true) by admit.
                 rewrite SS.
                 simpl.
@@ -1463,7 +1431,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
             {
               intro s.
               repeat (case s as [| s]; [ solve [left; auto] | ]).
-              cbn; compute_word_smaller.
               cbn.
               unfold datasize.
               cbn.
@@ -1474,7 +1441,6 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
               (* TODO: define a lemma so that just proving something for a large s is enough *)
               repeat (case s as [| s]; [ solve [left; auto] | ]).
               cbn.
-              compute_word_smaller; cbn.
               set (v0 := ZModulo.eq0 _ _).
               assert (V0 : v0 = false) by admit.
               rewrite V0.

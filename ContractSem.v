@@ -605,15 +605,9 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   : instruction_result :=
   match i with
   | PUSH1 w =>
-    if word_smaller w (word_of_N 256%N) then
-      stack_0_1_op v c w
-    else
-      InstructionInvalid
+    stack_0_1_op v c (word_mod w (word_of_N 256%N))
   | PUSH2 w =>
-    if word_smaller w (word_mul (word_of_N 256%N) (word_of_N 256%N)) then
-      stack_0_1_op v c w
-    else
-      InstructionInvalid
+    stack_0_1_op v c (word_mod w (word_mul (word_of_N 256%N) (word_of_N 256%N)))
   | SLOAD => stack_1_1_op v c (sload v)
   | SSTORE => sstore v c
   | JUMPI => jumpi v c
