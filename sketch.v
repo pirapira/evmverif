@@ -1159,12 +1159,9 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
           split.
           {
             intro s.
-            repeat (case s as [| s]; [ solve [left; auto] | ]).
-            cbn.
+            repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
             rewrite data_nil.
-            cbn.
-            repeat (case s as [| s]; [ solve [left; auto] | ]).
-            cbn.
+            repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
             right.
             reflexivity.
           }
@@ -1247,8 +1244,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   assert (S : s64 = false) by admit.
                   rewrite S.
                   simpl.
-                  repeat (case s as [| s]; [ solve [left; auto] | ]).
-                  cbn.
+                  repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
                   set (balance_smaller := word_smaller _ _).
                   assert (F : balance_smaller = false)by admit (* use enough_balance_spec *).
                   rewrite F.
@@ -1348,8 +1344,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
                   assert (S : s64 = false) by admit.
                   rewrite S.
                   simpl.
-                  repeat (case s as [| s]; [ solve [left; auto] | ]).
-                  cbn.
+                  repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
                   set (cd := cut_data _ _).
                   assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
                   rewrite cdH.
@@ -1382,8 +1377,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
               split.
               {
                 intros s.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
+                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
                 unfold plus_size_label.
                 unfold datasize.
                 cbn.
