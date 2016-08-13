@@ -1011,7 +1011,10 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         failing_action (counter_wallet income_sofar spending_sofar)
       ).
   Proof.
-  Admitted.
+    intros i s.
+    unfold counter_wallet.
+    apply response_expander_eq.
+  Qed.
 
   (* TODO: streamline this by allowing labels in JUMPDEST *)
   Definition plus_size_label : word := 13%Z.
