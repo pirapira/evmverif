@@ -37,6 +37,8 @@ This idea is coinductively captured in `response_to_world` type.
 * `always_fail`: a contract that always fails
 * `always_return`: a contract that always returns (gas is not modelled yet)
 
-`sketch.v`:
+`example/call_but_fail_on_reentrance`:
 * `call_but_fail_on_reentrance`: a contract that calls another contract but fails when the other contract calls back
+
+`sketch.v`:
 * `counter_wallet`(still in development): a wallet that counts the accumulated income and spending so far.
