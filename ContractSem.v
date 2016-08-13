@@ -219,8 +219,6 @@ Inductive instruction :=
 
 Definition program := list instruction.
 
-Print N.
-
 Require Import Recdef.
 
 Function drop_bytes (prog : list instruction) (bytes : N)
@@ -520,8 +518,6 @@ Definition jumpi (v : variable_env) (c : constant_env) : instruction_result :=
 
 Arguments jumpi v c /.
 
-
-Search _ (nat -> Z).
 
 Definition datasize (v : variable_env) : word :=
   word_of_nat (List.length v.(venv_data_sent)).

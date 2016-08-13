@@ -144,8 +144,6 @@ Module ConcreteWord <: Word.
 
   Definition word_iszero := ZnZ.eq0.
 
-  Print ZnZ.
-
   Definition word_mod := ZnZ.modulo.
 
 

@@ -128,9 +128,6 @@ Section Example0Continue.
       apply always_fail_eq in H; destruct H; subst
     end.
 
-
-  Search _ (N -> N -> bool).
-
   (* should be moved to Word *)
   Axiom smaller_word_of_N :
     forall x y,
