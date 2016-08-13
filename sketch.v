@@ -1020,6 +1020,7 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Definition plus_size_label : word := 13%Z.
   Arguments plus_size_label /.
 
+  (* TODO: add owner as an immediate value and check it *)
   Definition counter_wallet_code : program :=
     CALLDATASIZE ::
       PUSH1 plus_size_label ::
@@ -1100,15 +1101,22 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
   Definition all_cw_calling_state lst :=
     forall v, In v lst -> counter_wallet_calling_state v.
 
-  Lemma all_cw_calling_state_tail :
+  Lemma all_cw_calling_state_head_tail :
     forall head tail,
       all_cw_calling_state (head :: tail) ->
-      all_cw_calling_state tail.
+      all_cw_calling_state tail /\ counter_wallet_calling_state head.
   Proof.
-    intros head tail H elm Hin.
+    intros head tail H.
+    split.
+    {
+      intro elm.
+      intro elmh.
+      apply H.
+      apply in_cons.
+      auto.
+    }
     apply H.
-    apply in_cons.
-    auto.
+    apply in_eq.
   Qed.
 
   Theorem counter_wallet_correct :
@@ -1496,13 +1504,43 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
         apply counter_wallet_correct.
 
 
-        apply all_cw_calling_state_tail in ongoingH.
-        assumption.
+        apply all_cw_calling_state_head_tail in ongoingH.
+        tauto.
       }
     }
     {
-      (* Now this goal does make sense *)
-      admit.
+      unfold respond_to_fail_correctly.
+      intros v c a.
+      intro v_eq.
+      intro a_c_eq.
+      inversion a_c_eq; subst.
+      unfold failing_action in a_c_eq.
+      clear a_c_eq.
+      unfold build_venv_fail in v_eq.
+      simpl in v_eq.
+      case_eq ongoing.
+      {
+        intros ?.
+        subst.
+        congruence.
+      }
+      intros ongoing_head ongoing_tail ongoing_eq.
+      subst.
+      inversion v_eq; subst.
+      clear v_eq.
+      eexists.
+      eexists.
+      eexists.
+      split.
+      {
+        intro s.
+        repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+
+        admit.
+      }
+      {
+        admit.
+      }
     }
   Admitted.
 
