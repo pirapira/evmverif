@@ -1528,18 +1528,45 @@ CoFixpoint call_but_fail_on_reentrance (depth : word) :=
       subst.
       inversion v_eq; subst.
       clear v_eq.
+      apply all_cw_calling_state_head_tail in ongoingH.
+      case ongoingH as [ongoing_tailH ongoing_headH].
+
       eexists.
       eexists.
       eexists.
       split.
       {
         intro s.
+        case ongoing_headH.
+        clear ongoing_headH.
+        intro ongoing_head_sfx_eq.
+        rewrite ongoing_head_sfx_eq.
+
         repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
 
-        admit.
+        assert (Q : ZModulo.eq0 ALEN.p ZModulo.one = false) by admit.
+        rewrite Q.
+        simpl.
+        right.
+        reflexivity.
       }
-      {
-        admit.
+      { (* somehow use the induction hypothesis *)
+        unfold update_account_state.
+        cbn.
+        generalize (counter_wallet_correct income_sofar spending_sofar ongoing_tail ongoing_tailH).
+        unfold counter_wallet_account_state.
+        assert (S : venv_storage_at_call ongoing_head = counter_wallet_storage income_sofar spending_sofar).
+        {
+          admit.
+        }
+        rewrite S.
+        assert (B : venv_balance_at_call ongoing_head counter_wallet_address =
+                    word_sub income_sofar spending_sofar).
+        {
+          admit.
+        }
+        rewrite B.
+        auto.
       }
     }
   Admitted.
