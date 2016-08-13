@@ -17,4 +17,4 @@ Word.vo: Word.v
 	coqc Word.v
 
 clean:
-	rm -rf *.vo
+	rm -rf *.vo *.glob
