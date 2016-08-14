@@ -141,64 +141,94 @@ Module ExamplesOnConcreteWord.
   (* TODO:
      this has to remember the states in the stack as well *)
   CoFixpoint counter_wallet (income_sofar : word) (spending_sofar : word)
+             (stack : list (word * word))
     : response_to_world :=
     Respond
       (fun cenv =>
          match cenv.(callenv_data) with
-         | nil => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar)
+         | nil => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | _ =>
            if word_eq word_zero (cenv.(callenv_value)) then
              if Nat.leb 64 (List.length cenv.(callenv_data)) then
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
                if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
-                 sending_action addr value (counter_wallet income_sofar (word_add spending_sofar value))
+                 sending_action addr value
+                                (counter_wallet income_sofar (word_add spending_sofar value)
+                                                ((income_sofar, spending_sofar) :: stack))
                else
-                 failing_action (counter_wallet income_sofar spending_sofar)
+                 failing_action
+                   (counter_wallet income_sofar spending_sofar stack)
              else
-               failing_action (counter_wallet income_sofar spending_sofar)
+               failing_action (counter_wallet income_sofar spending_sofar stack)
            else
-             failing_action (counter_wallet income_sofar spending_sofar)
+             failing_action (counter_wallet income_sofar spending_sofar stack)
          end
       )
       (fun returned =>
-         ContractAction (ContractReturn nil) (counter_wallet income_sofar spending_sofar)
+         match stack with
+         | _ :: new_stack =>
+             ContractAction (ContractReturn nil)
+                            (counter_wallet income_sofar spending_sofar new_stack)
+         | nil =>
+           failing_action (counter_wallet income_sofar spending_sofar stack)
+         end
       )
       (
-        failing_action (counter_wallet income_sofar spending_sofar
-                       (* TODO: this is wrong, this has to be taken from the storage *) )
-      ).
+        match stack with
+        | (income_old, spending_old) :: new_stack =>
+          failing_action (counter_wallet income_old spending_old new_stack)
+        | nil =>
+          failing_action (counter_wallet income_sofar spending_sofar stack)
+        end
+      )
+      .
 
   Lemma counter_wallet_def :
-    forall income_sofar spending_sofar,
-      counter_wallet income_sofar spending_sofar =
+    forall income_sofar spending_sofar stack,
+      counter_wallet income_sofar spending_sofar stack =
     Respond
       (fun cenv =>
          match cenv.(callenv_data) with
-         | nil => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar)
+         | nil => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | _ =>
            if word_eq word_zero (cenv.(callenv_value)) then
              if Nat.leb 64 (List.length cenv.(callenv_data)) then
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
                if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
-                 sending_action addr value (counter_wallet income_sofar (word_add spending_sofar value))
+                 sending_action addr value
+                                (counter_wallet income_sofar (word_add spending_sofar value)
+                                                ((income_sofar, spending_sofar) :: stack))
                else
-                 failing_action (counter_wallet income_sofar spending_sofar)
+                 failing_action
+                   (counter_wallet income_sofar spending_sofar stack)
              else
-               failing_action (counter_wallet income_sofar spending_sofar)
+               failing_action (counter_wallet income_sofar spending_sofar stack)
            else
-             failing_action (counter_wallet income_sofar spending_sofar)
+             failing_action (counter_wallet income_sofar spending_sofar stack)
          end
       )
       (fun returned =>
-         ContractAction (ContractReturn nil) (counter_wallet income_sofar spending_sofar)
+         match stack with
+         | _ :: new_stack =>
+             ContractAction (ContractReturn nil)
+                            (counter_wallet income_sofar spending_sofar new_stack)
+         | nil =>
+           failing_action (counter_wallet income_sofar spending_sofar stack)
+         end
       )
       (
-        failing_action (counter_wallet income_sofar spending_sofar)
-      ).
+        match stack with
+        | (income_old, spending_old) :: new_stack =>
+          failing_action (counter_wallet income_old spending_old new_stack)
+        | nil =>
+          failing_action (counter_wallet income_sofar spending_sofar stack)
+        end
+      )
+      .
   Proof.
-    intros i s.
+    intros i s stack.
     unfold counter_wallet.
     apply response_expander_eq.
   Qed.
@@ -290,38 +320,20 @@ Module ExamplesOnConcreteWord.
         word_sub cw_calling_income_sofar cw_calling_spending_sofar
     }.
 
-  Definition all_cw_calling_state lst :=
-    forall v, In v lst -> counter_wallet_calling_state v.
-
-  Lemma all_cw_calling_state_head_tail :
-    forall head tail,
-      all_cw_calling_state (head :: tail) ->
-      all_cw_calling_state tail /\ counter_wallet_calling_state head.
-  Proof.
-    intros head tail H.
-    split.
-    {
-      intro elm.
-      intro elmh.
-      apply H.
-      apply in_cons.
-      auto.
-    }
-    apply H.
-    apply in_eq.
-  Qed.
+  (* TODO: define this *)
+  Axiom all_cw_coresponds : list variable_env -> list (word * word) -> Prop.
 
   Theorem counter_wallet_correct :
-    forall (income_sofar spending_sofar : word) ongoing,
-      all_cw_calling_state ongoing ->
+    forall (income_sofar spending_sofar : word) ongoing stack,
+      all_cw_coresponds ongoing stack ->
       account_state_responds_to_world
         (counter_wallet_account_state income_sofar spending_sofar ongoing)
-        (counter_wallet income_sofar spending_sofar)
+        (counter_wallet income_sofar spending_sofar stack)
         counter_wallet_invariant.
     (* TODO: strengthen the statement so that coinduction goes through. *)
   Proof.
     cofix.
-    intros income_sofar spending_sofar ongoing ongoingH.
+    intros income_sofar spending_sofar ongoing stack ongoingH.
     rewrite counter_wallet_def.
     apply AccountStep.
     {
@@ -494,24 +506,8 @@ Module ExamplesOnConcreteWord.
                   rewrite B.
                   apply (counter_wallet_correct income_sofar new_sp).
                   unfold new_ongoing.
-                  unfold all_cw_calling_state.
-                  intros elm elmH.
-                  apply in_inv in elmH.
-                  case elmH.
-                  {
-                    intro K.
-                    rewrite <-K.
-                    apply (Build_counter_wallet_calling_state _ income_sofar spending_sofar).
-                    { reflexivity. }
-                    {
-                      cbn.
-                      rewrite get_update_balance.
-                      reflexivity.
-                    }
-                  }
-                  {
-                    apply ongoingH.
-                  }
+                  (* waiting for definition of new_ongoing *)
+                  admit.
                 }
               }
               { (* not enough balance *)
@@ -681,16 +677,9 @@ Module ExamplesOnConcreteWord.
       {
         inversion venvH; subst.
         clear venvH.
-        unfold all_cw_calling_state in ongoingH.
-        assert (CSR : counter_wallet_calling_state recovered)
-          by (* TODO: use all_cw_calling_state *) admit.
-        rewrite (cw_calling_prg_sfx _ CSR).
-        intro s.
-        repeat (case s as [| s]; [ solve [left; auto] | ]).
-        simpl.
-        right.
-        f_equal.
-        }
+        (* waiting for definition *)
+        admit.
+      }
       {
         unfold update_account_state.
         unfold counter_wallet_account_state in counter_wallet_correct.
@@ -698,11 +687,13 @@ Module ExamplesOnConcreteWord.
         simpl.
 
         rewrite get_update_balance.
+        admit.
+        (* waiting for the above branch
         apply counter_wallet_correct.
 
 
         apply all_cw_calling_state_head_tail in ongoingH.
-        tauto.
+        tauto. *)
       }
     }
     {
@@ -725,8 +716,9 @@ Module ExamplesOnConcreteWord.
       subst.
       inversion v_eq; subst.
       clear v_eq.
+      (* TODO: replace these lines with something new.
       apply all_cw_calling_state_head_tail in ongoingH.
-      case ongoingH as [ongoing_tailH ongoing_headH].
+      case ongoingH as [ongoing_tailH ongoing_headH]. *)
 
       eexists.
       eexists.
@@ -734,6 +726,8 @@ Module ExamplesOnConcreteWord.
       split.
       {
         intro s.
+        admit.
+(* waiting for the new invariant
         case ongoing_headH.
         clear ongoing_headH.
         intros orig_income_sofar orig_spending_sofar ongoing_head_sfx_eq balance_eq.
@@ -745,13 +739,17 @@ Module ExamplesOnConcreteWord.
         rewrite Q.
         simpl.
         right.
-        reflexivity.
+        reflexivity. *)
       }
       { (* somehow use the induction hypothesis *)
         idtac.
 
         unfold update_account_state.
         cbn.
+        admit.
+
+        (* waiting for the new invariant.
+
         case ongoing_headH.
         clear ongoing_headH.
         intros orig_income orig_spending sfx_eq balance_eq.
@@ -766,7 +764,7 @@ Module ExamplesOnConcreteWord.
         rewrite balance_eq.
 
         (* the specification must be fixed first *)
-        admit.
+        admit. *)
       }
     }
   Admitted.
