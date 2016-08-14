@@ -66,7 +66,7 @@ Module ConcreteWord <: Word.
 
   Definition word_zero := ZnZ.zero.
 
-  Definition word_iszero := ZnZ.eq0.
+  Definition word_iszero := word_eq word_zero.
 
   Definition word_mod := ZnZ.modulo.
 

@@ -148,7 +148,7 @@ Module ExamplesOnConcreteWord.
     : response_to_world :=
     Respond
       (fun cenv =>
-         match ZModulo.eq0 ALEN.p (word_of_nat (length (callenv_data cenv))) with
+         match word_eq word_zero (word_of_nat (length (callenv_data cenv))) with
          | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
@@ -192,7 +192,7 @@ Module ExamplesOnConcreteWord.
       counter_wallet income_sofar spending_sofar stack =
     Respond
       (fun cenv =>
-         match ZModulo.eq0 ALEN.p (word_of_nat (length (callenv_data cenv))) with
+         match word_eq word_zero (word_of_nat (length (callenv_data cenv))) with
          | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
@@ -372,7 +372,7 @@ Module ExamplesOnConcreteWord.
       }
       {
         intro I.
-        set (data_len_zero := ZModulo.eq0 _ (word_of_nat _)).
+        set (data_len_zero := word_eq word_zero (word_of_nat _)).
         case_eq data_len_zero.
         { (* data_len_is_zero *)
           intro data_len_is_zero.
@@ -389,6 +389,7 @@ Module ExamplesOnConcreteWord.
             repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
             unfold datasize.
             cbn.
+            unfold word_iszero.
             rewrite data_len_is_zero.
             repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
             right.
@@ -453,7 +454,7 @@ Module ExamplesOnConcreteWord.
                   cbn.
                   unfold datasize.
                   cbn.
-                  set (e0 := ZModulo.eq0 _ _).
+                  set (e0 := word_iszero _).
                   assert (R : e0 = false) by admit.
                   rewrite R.
                   unfold N_of_word.
@@ -548,7 +549,7 @@ Module ExamplesOnConcreteWord.
                   cbn.
                   unfold datasize.
                   cbn.
-                  set (e0 := ZModulo.eq0 _ _).
+                  set (e0 := word_iszero _).
                   assert (R : e0 = false) by admit.
                   rewrite R.
                   unfold N_of_word.
@@ -605,14 +606,14 @@ Module ExamplesOnConcreteWord.
                 unfold plus_size_label.
                 unfold datasize.
                 cbn.
-                set (zero_cond := ZModulo.eq0 _ _ ).
+                set (zero_cond := word_iszero _ ).
                 assert (Zf : zero_cond = false) by admit.
                 rewrite Zf.
                 cbn.
                 simpl.
                 repeat (case s as [| s]; [ solve [left; auto] | ]).
                 cbn.
-                set (z_cond := ZModulo.eq0 _ _).
+                set (z_cond := word_iszero _).
                 assert (Zt : z_cond = true) by admit.
                 rewrite Zt.
                 repeat (case s as [| s]; [ solve [left; auto] | ]).
@@ -652,14 +653,17 @@ Module ExamplesOnConcreteWord.
               cbn.
               unfold datasize.
               cbn.
-              set (e0 := ZModulo.eq0 _ _).
-              assert (E0 : e0 = false) by admit (* an extra assumption that data is not as long as 2^256 is needed, or the spec should be changed *).
+              set (e0 := word_iszero _).
+              assert (E0 : e0 = false).
+              {
+                assumption.
+              }
               rewrite E0.
               simpl.
               (* TODO: define a lemma so that just proving something for a large s is enough *)
               repeat (case s as [| s]; [ solve [left; auto] | ]).
               cbn.
-              set (v0 := ZModulo.eq0 _ _).
+              set (v0 := word_iszero _).
               assert (V0 : v0 = false).
               {
                 (* maybe this should be a lemma *)
@@ -669,24 +673,6 @@ Module ExamplesOnConcreteWord.
                 unfold ZModulo.eq0.
                 set (v := callenv_value _).
                 case_eq v; auto.
-                {
-                  intros p vH.
-                  subst.
-                  unfold word_zero.
-                  rewrite ZnZ.spec_compare.
-                  simpl.
-                  set (c := ZModulo.to_Z _ _).
-                  case c; auto.
-                }
-                {
-                  intros p vH.
-                  subst.
-                  unfold word_zero.
-                  rewrite ZnZ.spec_compare.
-                  simpl.
-                  set (c := ZModulo.to_Z _ _).
-                  case c; auto.
-                }
               }
               rewrite V0.
               cbn.
@@ -791,12 +777,12 @@ Module ExamplesOnConcreteWord.
         intro s.
         case H2.
         clear H2.
-        intros ongoing_head_sfx_eq balance_eq.
+        intros ongoing_head_sfx_eq balance_eq storage_eq.
         rewrite ongoing_head_sfx_eq.
 
         repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
 
-        assert (Q : ZModulo.eq0 ALEN.p ZModulo.one = false).
+        assert (Q : word_iszero ZModulo.one = false).
         {
           compute.
           auto.
