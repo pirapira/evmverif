@@ -527,7 +527,6 @@ Module ExamplesOnConcreteWord.
                     }
                     {
                       cbn.
-                      Search _ update_balance.
                       rewrite get_update_balance.
                       reflexivity.
                     }
@@ -695,7 +694,17 @@ Module ExamplesOnConcreteWord.
       unfold build_venv_returned in venvH.
       unfold counter_wallet_account_state in venvH.
       cbn in venvH.
-      case ongoing as [| recovered rest_oging]; try congruence.
+      case ongoing as [| recovered rest_ongoing]; try congruence.
+      inversion ongoingH; subst.
+      (* I don't like the generated names... *)
+      (* TODO: create a theorem instead of inversion ongoingH *)
+
+      case H2.
+      clear H2.
+      intros sfx_eq bal_eq.
+      inversion H1; subst.
+
+
       (* TODO: define a property that implies this goal *)
       eexists.
       eexists.
@@ -704,8 +713,13 @@ Module ExamplesOnConcreteWord.
       {
         inversion venvH; subst.
         clear venvH.
-        (* waiting for definition *)
-        admit.
+        rewrite sfx_eq.
+
+        intro s.
+        repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+        simpl.
+        right.
+        eauto.
       }
       {
         unfold update_account_state.
@@ -714,13 +728,9 @@ Module ExamplesOnConcreteWord.
         simpl.
 
         rewrite get_update_balance.
-        admit.
-        (* waiting for the above branch
-        apply counter_wallet_correct.
-
-
-        apply all_cw_calling_state_head_tail in ongoingH.
-        tauto. *)
+        apply (counter_wallet_correct income_sofar spending_sofar
+                                           rest_ongoing tail_stack).
+        assumption.
       }
     }
     {
@@ -743,6 +753,9 @@ Module ExamplesOnConcreteWord.
       subst.
       inversion v_eq; subst.
       clear v_eq.
+      inversion ongoingH; subst.
+      clear ongoingH.
+      inversion H0; subst.
       (* TODO: replace these lines with something new.
       apply all_cw_calling_state_head_tail in ongoingH.
       case ongoingH as [ongoing_tailH ongoing_headH]. *)
@@ -753,11 +766,9 @@ Module ExamplesOnConcreteWord.
       split.
       {
         intro s.
-        admit.
-(* waiting for the new invariant
-        case ongoing_headH.
-        clear ongoing_headH.
-        intros orig_income_sofar orig_spending_sofar ongoing_head_sfx_eq balance_eq.
+        case H2.
+        clear H2.
+        intros ongoing_head_sfx_eq balance_eq.
         rewrite ongoing_head_sfx_eq.
 
         repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
@@ -766,32 +777,21 @@ Module ExamplesOnConcreteWord.
         rewrite Q.
         simpl.
         right.
-        reflexivity. *)
+        eauto.
       }
       { (* somehow use the induction hypothesis *)
-        idtac.
-
         unfold update_account_state.
         cbn.
-        admit.
 
-        (* waiting for the new invariant.
-
-        case ongoing_headH.
-        clear ongoing_headH.
-        intros orig_income orig_spending sfx_eq balance_eq.
-
-        generalize (counter_wallet_correct orig_income orig_spending ongoing_tail ongoing_tailH).
+        generalize (counter_wallet_correct hd_income hd_spending
+                                           ongoing_tail tail_stack).
         unfold counter_wallet_account_state.
-        assert (S : venv_storage_at_call ongoing_head = counter_wallet_storage orig_income orig_spending).
-        {
-          admit.
-        }
+        case H2; clear H2.
+        intros sfx_eq balance_eq.
+        assert (S : venv_storage_at_call ongoing_head = counter_wallet_storage hd_income hd_spending) by admit.
         rewrite S.
         rewrite balance_eq.
-
-        (* the specification must be fixed first *)
-        admit. *)
+        tauto.
       }
     }
   Admitted.
