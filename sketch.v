@@ -304,7 +304,7 @@ Module ExamplesOnConcreteWord.
     |}
     .
 
-  Record counter_wallet_calling_state (v : variable_env) (income_for_reset : word) (spending_for_reset : word) : Prop :=
+  Record counter_wallet_calling_state (income_for_reset : word) (spending_for_reset : word) (v : variable_env) : Prop :=
     {
       cw_calling_prg_sfx :
         (v.(venv_prg_sfx) =
@@ -324,7 +324,7 @@ Module ExamplesOnConcreteWord.
   | acc_nil : all_cw_corresponds nil nil
   | acc_cons :
       forall hd_venv tail_venvs hd_income hd_spending tail_stack,
-        counter_wallet_calling_state hd_venv hd_income hd_spending ->
+        counter_wallet_calling_state hd_income hd_spending hd_venv ->
         all_cw_corresponds tail_venvs tail_stack ->
         all_cw_corresponds (hd_venv :: tail_venvs)
                          ((hd_income, hd_spending) :: tail_stack)
@@ -513,8 +513,28 @@ Module ExamplesOnConcreteWord.
                   rewrite B.
                   apply (counter_wallet_correct income_sofar new_sp).
                   unfold new_ongoing.
-                  (* waiting for definition of new_ongoing *)
-                  admit.
+                  apply acc_cons.
+                  {
+                    simpl.
+                    refine (
+                        {|
+                          cw_calling_prg_sfx := _ ;
+                          cw_calling_balance := _
+                        |}
+                      ).
+                    {
+                      reflexivity.
+                    }
+                    {
+                      cbn.
+                      Search _ update_balance.
+                      rewrite get_update_balance.
+                      reflexivity.
+                    }
+                  }
+                  {
+                    assumption.
+                  }
                 }
               }
               { (* not enough balance *)
