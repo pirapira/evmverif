@@ -304,10 +304,8 @@ Module ExamplesOnConcreteWord.
     |}
     .
 
-  Record counter_wallet_calling_state (v : variable_env) : Prop :=
+  Record counter_wallet_calling_state (v : variable_env) (income_for_reset : word) (spending_for_reset : word) : Prop :=
     {
-      cw_calling_income_sofar : word;
-      cw_calling_spending_sofar : word;
       cw_calling_prg_sfx :
         (v.(venv_prg_sfx) =
          ISZERO ::
@@ -317,15 +315,24 @@ Module ExamplesOnConcreteWord.
              nil) ;
       cw_calling_balance :
         venv_balance_at_call v counter_wallet_address =
-        word_sub cw_calling_income_sofar cw_calling_spending_sofar
+        word_sub income_for_reset spending_for_reset
     }.
 
   (* TODO: define this *)
-  Axiom all_cw_coresponds : list variable_env -> list (word * word) -> Prop.
+  Inductive all_cw_corresponds :
+            list variable_env -> list (word * word) -> Prop :=
+  | acc_nil : all_cw_corresponds nil nil
+  | acc_cons :
+      forall hd_venv tail_venvs hd_income hd_spending tail_stack,
+        counter_wallet_calling_state hd_venv hd_income hd_spending ->
+        all_cw_corresponds tail_venvs tail_stack ->
+        all_cw_corresponds (hd_venv :: tail_venvs)
+                         ((hd_income, hd_spending) :: tail_stack)
+  .
 
   Theorem counter_wallet_correct :
     forall (income_sofar spending_sofar : word) ongoing stack,
-      all_cw_coresponds ongoing stack ->
+      all_cw_corresponds ongoing stack ->
       account_state_responds_to_world
         (counter_wallet_account_state income_sofar spending_sofar ongoing)
         (counter_wallet income_sofar spending_sofar stack)
