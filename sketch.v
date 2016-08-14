@@ -795,9 +795,8 @@ Module ExamplesOnConcreteWord.
                                            ongoing_tail tail_stack).
         unfold counter_wallet_account_state.
         case H2; clear H2.
-        intros sfx_eq balance_eq.
-        assert (S : venv_storage_at_call ongoing_head = counter_wallet_storage hd_income hd_spending) by admit.
-        rewrite S.
+        intros sfx_eq balance_eq storage_eq.
+        rewrite storage_eq.
         rewrite balance_eq.
         tauto.
       }
