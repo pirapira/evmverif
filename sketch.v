@@ -315,7 +315,10 @@ Module ExamplesOnConcreteWord.
              nil) ;
       cw_calling_balance :
         venv_balance_at_call v counter_wallet_address =
-        word_sub income_for_reset spending_for_reset
+        word_sub income_for_reset spending_for_reset ;
+      cw_calling_storage :
+        v.(venv_storage_at_call) =
+         counter_wallet_storage income_for_reset spending_for_reset
     }.
 
   (* TODO: define this *)
@@ -512,6 +515,7 @@ Module ExamplesOnConcreteWord.
                   assert (B : new_balance = word_sub income_sofar new_sp) by admit.
                   rewrite B.
                   apply (counter_wallet_correct income_sofar new_sp).
+
                   unfold new_ongoing.
                   apply acc_cons.
                   {
@@ -528,6 +532,10 @@ Module ExamplesOnConcreteWord.
                     {
                       cbn.
                       rewrite get_update_balance.
+                      reflexivity.
+                    }
+                    {
+                      cbn.
                       reflexivity.
                     }
                   }
