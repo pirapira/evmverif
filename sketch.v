@@ -140,14 +140,17 @@ Module ExamplesOnConcreteWord.
 
   (* TODO:
      this has to remember the states in the stack as well *)
+  (* TODO:
+     why can't this be computed from the bytecode easily...
+     which is called the static symbolic execution... *)
   CoFixpoint counter_wallet (income_sofar : word) (spending_sofar : word)
              (stack : list (word * word))
     : response_to_world :=
     Respond
       (fun cenv =>
-         match cenv.(callenv_data) with
-         | nil => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
-         | _ =>
+         match ZModulo.eq0 ALEN.p (word_of_nat (length (callenv_data cenv))) with
+         | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
+         | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
              if Nat.leb 64 (List.length cenv.(callenv_data)) then
                let addr := list_slice 0 32 cenv.(callenv_data) in
@@ -189,9 +192,9 @@ Module ExamplesOnConcreteWord.
       counter_wallet income_sofar spending_sofar stack =
     Respond
       (fun cenv =>
-         match cenv.(callenv_data) with
-         | nil => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
-         | _ =>
+         match ZModulo.eq0 ALEN.p (word_of_nat (length (callenv_data cenv))) with
+         | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
+         | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
              if Nat.leb 64 (List.length cenv.(callenv_data)) then
                let addr := list_slice 0 32 cenv.(callenv_data) in
@@ -369,9 +372,10 @@ Module ExamplesOnConcreteWord.
       }
       {
         intro I.
-        case_eq (callenv_data callenv).
-        { (* input data is nil *)
-          intro data_nil.
+        set (data_len_zero := ZModulo.eq0 _ (word_of_nat _)).
+        case_eq data_len_zero.
+        { (* data_len_is_zero *)
+          intro data_len_is_zero.
           unfold receive_eth.
           intro H.
           inversion H; subst.
@@ -383,7 +387,9 @@ Module ExamplesOnConcreteWord.
           {
             intro s.
             repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-            rewrite data_nil.
+            unfold datasize.
+            cbn.
+            rewrite data_len_is_zero.
             repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
             right.
             reflexivity.
@@ -417,7 +423,7 @@ Module ExamplesOnConcreteWord.
           }
         }
         { (* input data is not nil *)
-          intros b l bl_eq.
+          intros data_len_non_zero.
           case_eq (word_eq word_zero (callenv_value callenv)).
           { (* sent value is zero *)
             intro sent_zero.
@@ -476,24 +482,6 @@ Module ExamplesOnConcreteWord.
                   f_equal.
                   f_equal.
                   f_equal.
-                  {
-                    unfold cut_data.
-                    simpl.
-                    rewrite bl_eq.
-                    reflexivity.
-                  }
-                  {
-                    unfold cut_data.
-                    simpl.
-                    rewrite bl_eq.
-                    reflexivity.
-                  }
-                  {
-                    unfold cut_data.
-                    simpl.
-                    rewrite bl_eq.
-                    reflexivity.
-                  }
                   {
                     (* TODO: need to define cut_memory *)
                     admit.
@@ -665,7 +653,7 @@ Module ExamplesOnConcreteWord.
               unfold datasize.
               cbn.
               set (e0 := ZModulo.eq0 _ _).
-              assert (E0 : e0 = false) by admit (* an extra assumption that data is not as long as 2^256 is needed*).
+              assert (E0 : e0 = false) by admit (* an extra assumption that data is not as long as 2^256 is needed, or the spec should be changed *).
               rewrite E0.
               simpl.
               (* TODO: define a lemma so that just proving something for a large s is enough *)
