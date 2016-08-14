@@ -781,7 +781,11 @@ Module ExamplesOnConcreteWord.
 
         repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
 
-        assert (Q : ZModulo.eq0 ALEN.p ZModulo.one = false) by admit.
+        assert (Q : ZModulo.eq0 ALEN.p ZModulo.one = false).
+        {
+          compute.
+          auto.
+        }
         rewrite Q.
         simpl.
         right.
