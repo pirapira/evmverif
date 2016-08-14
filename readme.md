@@ -33,7 +33,7 @@ This idea is coinductively captured in `response_to_world` type.
 
 ## Examples
 
-`AbstractExamples.v`:
+`example/AbstractExamples.v`:
 * `always_fail`: a contract that always fails
 * `always_return`: a contract that always returns (gas is not modelled yet)
 

@@ -137,6 +137,9 @@ Module ExamplesOnConcreteWord.
                         callarg_output_size := 0%Z
                       |}) cont.
 
+
+  (* TODO:
+     this has to remember the states in the stack as well *)
   CoFixpoint counter_wallet (income_sofar : word) (spending_sofar : word)
     : response_to_world :=
     Respond
@@ -162,7 +165,8 @@ Module ExamplesOnConcreteWord.
          ContractAction (ContractReturn nil) (counter_wallet income_sofar spending_sofar)
       )
       (
-        failing_action (counter_wallet income_sofar spending_sofar)
+        failing_action (counter_wallet income_sofar spending_sofar
+                       (* TODO: this is wrong, this has to be taken from the storage *) )
       ).
 
   Lemma counter_wallet_def :
@@ -270,15 +274,20 @@ Module ExamplesOnConcreteWord.
     |}
     .
 
-  Record counter_wallet_calling_state (v : variable_env) :=
+  Record counter_wallet_calling_state (v : variable_env) : Prop :=
     {
+      cw_calling_income_sofar : word;
+      cw_calling_spending_sofar : word;
       cw_calling_prg_sfx :
         (v.(venv_prg_sfx) =
          ISZERO ::
              PUSH1 word_zero ::
              JUMPI ::
              STOP ::
-             nil)
+             nil) ;
+      cw_calling_balance :
+        venv_balance_at_call v counter_wallet_address =
+        word_sub cw_calling_income_sofar cw_calling_spending_sofar
     }.
 
   Definition all_cw_calling_state lst :=
@@ -492,8 +501,13 @@ Module ExamplesOnConcreteWord.
                   {
                     intro K.
                     rewrite <-K.
-                    apply Build_counter_wallet_calling_state.
-                    reflexivity.
+                    apply (Build_counter_wallet_calling_state _ income_sofar spending_sofar).
+                    { reflexivity. }
+                    {
+                      cbn.
+                      rewrite get_update_balance.
+                      reflexivity.
+                    }
                   }
                   {
                     apply ongoingH.
@@ -722,7 +736,7 @@ Module ExamplesOnConcreteWord.
         intro s.
         case ongoing_headH.
         clear ongoing_headH.
-        intro ongoing_head_sfx_eq.
+        intros orig_income_sofar orig_spending_sofar ongoing_head_sfx_eq balance_eq.
         rewrite ongoing_head_sfx_eq.
 
         repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
@@ -734,22 +748,25 @@ Module ExamplesOnConcreteWord.
         reflexivity.
       }
       { (* somehow use the induction hypothesis *)
+        idtac.
+
         unfold update_account_state.
         cbn.
-        generalize (counter_wallet_correct income_sofar spending_sofar ongoing_tail ongoing_tailH).
+        case ongoing_headH.
+        clear ongoing_headH.
+        intros orig_income orig_spending sfx_eq balance_eq.
+
+        generalize (counter_wallet_correct orig_income orig_spending ongoing_tail ongoing_tailH).
         unfold counter_wallet_account_state.
-        assert (S : venv_storage_at_call ongoing_head = counter_wallet_storage income_sofar spending_sofar).
+        assert (S : venv_storage_at_call ongoing_head = counter_wallet_storage orig_income orig_spending).
         {
           admit.
         }
         rewrite S.
-        assert (B : venv_balance_at_call ongoing_head counter_wallet_address =
-                    word_sub income_sofar spending_sofar).
-        {
-          admit.
-        }
-        rewrite B.
-        auto.
+        rewrite balance_eq.
+
+        (* the specification must be fixed first *)
+        admit.
       }
     }
   Admitted.

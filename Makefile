@@ -1,6 +1,6 @@
 .PHONY: clean
 
-all: sketch.vo AbstractExamples.vo example/call_but_fail_on_reentrance.vo
+all: sketch.vo example/AbstractExamples.vo example/call_but_fail_on_reentrance.vo
 
 
 sketch.vo: Word.vo sketch.v ContractSem.vo ConcreteWord.vo
@@ -12,8 +12,8 @@ example/call_but_fail_on_reentrance.vo: example/call_but_fail_on_reentrance.v Co
 ConcreteWord.vo: ConcreteWord.v Word.vo
 	coqc ConcreteWord.v
 
-AbstractExamples.vo: Word.vo AbstractExamples.v ContractSem.vo
-	coqc AbstractExamples.v
+example/AbstractExamples.vo: Word.vo example/AbstractExamples.v ContractSem.vo
+	coqc example/AbstractExamples.v
 
 ContractSem.vo: Word.vo ContractSem.v
 	coqc ContractSem.v
