@@ -672,7 +672,34 @@ Module ExamplesOnConcreteWord.
               repeat (case s as [| s]; [ solve [left; auto] | ]).
               cbn.
               set (v0 := ZModulo.eq0 _ _).
-              assert (V0 : v0 = false) by admit.
+              assert (V0 : v0 = false).
+              {
+                (* maybe this should be a lemma *)
+                unfold v0.
+                generalize value_nonzero.
+                unfold word_eq.
+                unfold ZModulo.eq0.
+                set (v := callenv_value _).
+                case_eq v; auto.
+                {
+                  intros p vH.
+                  subst.
+                  unfold word_zero.
+                  rewrite ZnZ.spec_compare.
+                  simpl.
+                  set (c := ZModulo.to_Z _ _).
+                  case c; auto.
+                }
+                {
+                  intros p vH.
+                  subst.
+                  unfold word_zero.
+                  rewrite ZnZ.spec_compare.
+                  simpl.
+                  set (c := ZModulo.to_Z _ _).
+                  case c; auto.
+                }
+              }
               rewrite V0.
               cbn.
               right. (* TODO: maybe name a constructor *)
