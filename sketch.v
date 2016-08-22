@@ -152,7 +152,9 @@ Module ExamplesOnConcreteWord.
          | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
-             if word_smaller 64%Z (word_of_nat (List.length cenv.(callenv_data))) then
+             if word_smaller (word_of_nat (List.length cenv.(callenv_data))) 64%Z then
+               failing_action (counter_wallet income_sofar spending_sofar stack)
+             else
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
                if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
@@ -162,8 +164,6 @@ Module ExamplesOnConcreteWord.
                else
                  failing_action
                    (counter_wallet income_sofar spending_sofar stack)
-             else
-               failing_action (counter_wallet income_sofar spending_sofar stack)
            else
              failing_action (counter_wallet income_sofar spending_sofar stack)
          end
@@ -196,7 +196,9 @@ Module ExamplesOnConcreteWord.
          | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
-             if word_smaller 64%Z (word_of_nat (List.length cenv.(callenv_data))) then
+             if word_smaller (word_of_nat (List.length cenv.(callenv_data))) 64%Z then
+               failing_action (counter_wallet income_sofar spending_sofar stack)
+             else
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
                if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
@@ -206,8 +208,6 @@ Module ExamplesOnConcreteWord.
                else
                  failing_action
                    (counter_wallet income_sofar spending_sofar stack)
-             else
-               failing_action (counter_wallet income_sofar spending_sofar stack)
            else
              failing_action (counter_wallet income_sofar spending_sofar stack)
          end
@@ -512,6 +512,57 @@ Module ExamplesOnConcreteWord.
             match goal with
               | [ |- ((if ?t then _ else _) = _) -> _] => case_eq t
             end.
+            
+            {
+              intro data_short.
+              unfold failing_action.
+              intro H.
+              inversion H; subst.
+              clear H.
+              eexists.
+              eexists.
+              eexists.
+              split.
+              {
+                intros s.
+                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+                unfold plus_size_label.
+                unfold datasize.
+                cbn.
+                set (zero_cond := word_iszero _ ).
+                assert (Zf : zero_cond = false) by assumption.
+                rewrite Zf.
+                cbn.
+                simpl.
+                repeat (case s as [| s]; [ solve [left; auto] | ]).
+                cbn.
+                set (z_cond := word_iszero _).
+                assert (Zt : z_cond = true) by assumption.
+                rewrite Zt.
+                repeat (case s as [| s]; [ solve [left; auto] | ]).
+                cbn.
+                unfold datasize.
+                cbn.
+                set (small := word_smaller _ _).
+                assert (SS : small = true).
+                {
+                  unfold small.
+                  assumption.
+                }
+                rewrite SS.
+                simpl.
+                right.
+                eauto.
+              }
+              {
+                unfold update_account_state.
+                cbn.
+                unfold update_balance.
+                rewrite address_eq_refl.
+                apply counter_wallet_correct.
+                assumption.
+              }
+            }
             {
               intro data_big_enough.
               unfold sending_action.
@@ -714,55 +765,6 @@ Module ExamplesOnConcreteWord.
                   apply counter_wallet_correct.
                   assumption.
                 }
-              }
-            }
-            {
-              intro data_short.
-              unfold failing_action.
-              intro H.
-              inversion H; subst.
-              clear H.
-              eexists.
-              eexists.
-              eexists.
-              split.
-              {
-                intros s.
-                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-                unfold plus_size_label.
-                unfold datasize.
-                cbn.
-                set (zero_cond := word_iszero _ ).
-                assert (Zf : zero_cond = false) by assumption.
-                rewrite Zf.
-                cbn.
-                simpl.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
-                set (z_cond := word_iszero _).
-                assert (Zt : z_cond = true) by assumption.
-                rewrite Zt.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
-                unfold datasize.
-                cbn.
-                set (small := word_smaller _ _).
-                assert (SS : small = true).
-                {
-                  admit.
-                }
-                rewrite SS.
-                simpl.
-                right.
-                eauto.
-              }
-              {
-                unfold update_account_state.
-                cbn.
-                unfold update_balance.
-                rewrite address_eq_refl.
-                apply counter_wallet_correct.
-                assumption.
               }
             }
           }
