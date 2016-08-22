@@ -632,10 +632,15 @@ Module ExamplesOnConcreteWord.
                   {
                     unfold balance_smaller.
                     rewrite get_update_balance.
-
-                    Search _ word_smaller_or_eq.
-                    (* TODO: create a lemma that can transform not_enough_spec *)
-                    admit.
+                    Lemma word_add_sub :
+                      forall a b c,
+                        word_add (word_sub a b) c =
+                        word_sub (word_add a c) b.
+                    Proof.
+                      admit.
+                    Admitted.
+                    rewrite word_add_sub.
+                    assumption.
                   }
                   rewrite A.
                   right.
