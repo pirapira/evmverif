@@ -157,13 +157,13 @@ Module ExamplesOnConcreteWord.
              else
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
-               if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
+               if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
+                 failing_action
+                   (counter_wallet income_sofar spending_sofar stack)
+               else
                  sending_action addr value
                                 (counter_wallet income_sofar (word_add spending_sofar value)
                                                 ((income_sofar, spending_sofar) :: stack))
-               else
-                 failing_action
-                   (counter_wallet income_sofar spending_sofar stack)
            else
              failing_action (counter_wallet income_sofar spending_sofar stack)
          end
@@ -201,13 +201,13 @@ Module ExamplesOnConcreteWord.
              else
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
-               if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
+               if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
+                 failing_action
+                   (counter_wallet income_sofar spending_sofar stack)
+               else
                  sending_action addr value
                                 (counter_wallet income_sofar (word_add spending_sofar value)
                                                 ((income_sofar, spending_sofar) :: stack))
-               else
-                 failing_action
-                   (counter_wallet income_sofar spending_sofar stack)
            else
              failing_action (counter_wallet income_sofar spending_sofar stack)
          end
@@ -568,8 +568,88 @@ Module ExamplesOnConcreteWord.
               unfold sending_action.
               (* Here, before introducing the existential variables,
                * all ambuiguities must be resolved. *)
-              set (enough_balance_spec := word_smaller_or_eq _ _).
+              set (enough_balance_spec := word_smaller _ _).
               case_eq enough_balance_spec.
+              { (* not enough balance *)
+                intro not_enough_spec.
+                intro H.
+                inversion H; subst.
+                clear H.
+
+                eexists.
+                eexists.
+                eexists.
+                split.
+                {
+                  intro s.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  cbn.
+                  unfold datasize.
+                  cbn.
+                  set (e0 := word_iszero _).
+                  assert (R : e0 = false) by admit.
+                  rewrite R.
+                  unfold N_of_word.
+                  cbn.
+                  unfold ZModulo.to_Z.
+                  unfold ZModulo.wB.
+                  simpl.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  simpl.
+                  assert (Z : word_iszero (callenv_value callenv) = true)
+                  by assumption.
+                  rewrite Z.
+                  repeat (case s as [| s]; [ solve [left; auto] | ]).
+                  cbn.
+                  unfold datasize.
+                  simpl.
+                  set (s64 := word_smaller _ _).
+                  assert (S : s64 = false).
+                  {
+                    unfold s64.
+                    set (x := ZModulo.modulo _ _ _ ).
+                    compute in x.
+                    unfold x.
+                    (* TODO: the use of nat in data_big_enough is not good *)
+                    admit.
+                  }
+
+                  rewrite S.
+                  simpl.
+                  repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+                  set (cd := cut_data _ _).
+                  assert (cdH : cd = list_slice 32 32 (callenv_data callenv)).
+                  {
+                    unfold cd.
+                    cbn.
+                    (* TODO: define cut_data *)
+                    admit.
+                  }
+                  rewrite cdH.
+                  clear cdH cd.
+                  set (balance_smaller := word_smaller _ _).
+                  assert (A : balance_smaller = true).
+                  {
+                    unfold balance_smaller.
+                    rewrite get_update_balance.
+
+                    Search _ word_smaller_or_eq.
+                    (* TODO: create a lemma that can transform not_enough_spec *)
+                    admit.
+                  }
+                  rewrite A.
+                  right.
+                  eauto.
+                }
+                {
+                  simpl.
+                  unfold counter_wallet_account_state in counter_wallet_correct.
+                  unfold update_balance.
+                  rewrite address_eq_refl.
+                  apply counter_wallet_correct.
+                  assumption.
+                }
+              }
               { (* enough balance *)
                 intro enough_balance_spec_t.
                 intro H.
@@ -685,85 +765,6 @@ Module ExamplesOnConcreteWord.
                   {
                     assumption.
                   }
-                }
-              }
-              { (* not enough balance *)
-                intro not_enough_spec.
-                intro H.
-                inversion H; subst.
-                clear H.
-
-                eexists.
-                eexists.
-                eexists.
-                split.
-                {
-                  intro s.
-                  repeat (case s as [| s]; [ solve [left; auto] | ]).
-                  cbn.
-                  unfold datasize.
-                  cbn.
-                  set (e0 := word_iszero _).
-                  assert (R : e0 = false) by admit.
-                  rewrite R.
-                  unfold N_of_word.
-                  cbn.
-                  unfold ZModulo.to_Z.
-                  unfold ZModulo.wB.
-                  simpl.
-                  repeat (case s as [| s]; [ solve [left; auto] | ]).
-                  simpl.
-                  assert (Z : word_iszero (callenv_value callenv) = true)
-                  by assumption.
-                  rewrite Z.
-                  repeat (case s as [| s]; [ solve [left; auto] | ]).
-                  cbn.
-                  unfold datasize.
-                  simpl.
-                  set (s64 := word_smaller _ _).
-                  assert (S : s64 = false).
-                  {
-                    unfold s64.
-                    set (x := ZModulo.modulo _ _ _ ).
-                    compute in x.
-                    unfold x.
-                    (* TODO: the use of nat in data_big_enough is not good *)
-                    admit.
-                  }
-
-                  rewrite S.
-                  simpl.
-                  repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-                  set (cd := cut_data _ _).
-                  assert (cdH : cd = list_slice 32 32 (callenv_data callenv)).
-                  {
-                    unfold cd.
-                    cbn.
-                    (* TODO: define cut_data *)
-                    admit.
-                  }
-                  rewrite cdH.
-                  clear cdH cd.
-                  set (balance_smaller := word_smaller _ _).
-                  assert (A : balance_smaller = true).
-                  {
-                    unfold balance_smaller.
-                    rewrite get_update_balance.
-                    Search _ word_smaller_or_eq.
-                    (* TODO: create a lemma that can transform not_enough_spec *)
-                    admit.
-                  }
-                  rewrite A.
-                  right.
-                  eauto.
-                }
-                {
-                  simpl.
-                  unfold counter_wallet_account_state in counter_wallet_correct.
-                  unfold update_balance.
-                  rewrite address_eq_refl.
-                  apply counter_wallet_correct.
-                  assumption.
                 }
               }
             }
