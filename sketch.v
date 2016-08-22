@@ -152,7 +152,7 @@ Module ExamplesOnConcreteWord.
          | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
-             if Nat.leb 64 (List.length cenv.(callenv_data)) then
+             if word_smaller 64%Z (word_of_nat (List.length cenv.(callenv_data))) then
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
                if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
@@ -196,7 +196,7 @@ Module ExamplesOnConcreteWord.
          | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
-             if Nat.leb 64 (List.length cenv.(callenv_data)) then
+             if word_smaller 64%Z (word_of_nat (List.length cenv.(callenv_data))) then
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
                if word_smaller_or_eq value (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) then
@@ -749,7 +749,6 @@ Module ExamplesOnConcreteWord.
                 set (small := word_smaller _ _).
                 assert (SS : small = true).
                 {
-                  (* TODO: use data_short *)
                   admit.
                 }
                 rewrite SS.
