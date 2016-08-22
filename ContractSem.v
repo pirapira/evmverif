@@ -556,9 +556,9 @@ Definition call (v : variable_env) (c : constant_env) : instruction_result :=
            venv_prg_sfx := drop_one_element (v.(venv_prg_sfx));
            venv_balance :=
              (update_balance (address_of_word e1)
-                             (word_add (v.(venv_balance) (address_of_word e1)) e3)
+                             (word_add (v.(venv_balance) (address_of_word e1)) e2)
              (update_balance c.(cenv_this)
-                (word_sub (v.(venv_balance) (c.(cenv_this))) e3) v.(venv_balance)));
+                (word_sub (v.(venv_balance) (c.(cenv_this))) e2) v.(venv_balance)));
            venv_caller := v.(venv_caller);
            venv_value_sent := v.(venv_value_sent) ;
            venv_data_sent := v.(venv_data_sent) ;

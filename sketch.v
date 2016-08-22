@@ -695,6 +695,7 @@ Module ExamplesOnConcreteWord.
                   assert (F : balance_smaller = false)by admit (* use enough_balance_spec *).
                   rewrite F.
                   clear F.
+                  cbn.
                   right.
                   f_equal.
                   f_equal.
@@ -716,7 +717,12 @@ Module ExamplesOnConcreteWord.
 
                   set (new_balance := if (_ : bool) then _ else _).
                   set (new_sp := ZModulo.add spending_sofar _).
-                  assert (S : new_storage = counter_wallet_storage income_sofar new_sp) by admit.
+                  assert (S : new_storage = counter_wallet_storage income_sofar new_sp).
+                  {
+                    unfold new_storage.
+                    admit.
+                  }
+
                   rewrite S.
                   assert (B : new_balance = word_sub income_sofar new_sp).
                   {
@@ -738,7 +744,29 @@ Module ExamplesOnConcreteWord.
                       admit.
                     }
                     {
-                      admit.
+                      intro selfF.
+                      unfold new_balance.
+                      rewrite selfF.
+                      assert (value_zero : callenv_value callenv = word_zero).
+                      {
+                        (* use sent_zero *)
+                        admit.
+                      }
+                      rewrite value_zero.
+                      unfold new_sp.
+                      rewrite word_add_sub.
+                      Lemma word_add_zero :
+                        forall a, word_add a word_zero = a.
+                      Proof.
+                      Admitted.
+                      rewrite word_add_zero.
+                      Lemma word_sub_sub :
+                        forall a b c,
+                          word_sub a (word_add b c) = word_sub (word_sub a b) c.
+                      Proof.
+                      Admitted.
+                      rewrite word_sub_sub.
+                      reflexivity.
                     }
                   }
                   rewrite B.
