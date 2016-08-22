@@ -336,6 +336,66 @@ Module ExamplesOnConcreteWord.
                          ((hd_income, hd_spending) :: tail_stack)
   .
 
+  Lemma find_remove :
+    forall a b orig,
+      ST.find (elt:=word) a (ST.remove b orig) =
+      if (word_eq a b) then None
+      else ST.find (elt := word) a orig.
+  Proof.
+    intros a b orig.
+    admit.
+  Admitted.
+
+  Lemma find_add :
+    forall a b c orig,
+      ST.find (elt:=word) a (ST.add b c orig) =
+      if (word_eq a b) then Some c
+      else ST.find (elt := word) a orig.
+  Proof.
+    intros a b c orig.
+    admit.
+  Admitted.
+
+  Lemma storage_load_store :
+    forall r w x orig,
+      storage_load r (storage_store w x orig) =
+      if word_eq r w then x else storage_load r orig.
+  Proof.
+    intros r w x orig.
+    unfold storage_load.
+    unfold storage_store.
+    case_eq (word_eq word_zero x).
+    {
+      intro x_zero.
+      case_eq (word_eq r w).
+      { (* r is w *)
+        intro rw.
+        assert (H : r = w) by admit.
+        subst.
+        set (found := ST.find _ _).
+        assert (H : found = None) by admit.
+        rewrite H.
+        (* use x_zero; a lemma for concrete word is needed *)
+        admit.
+      }
+      {
+        (* r is not w *)
+        intro rw.
+        (* move this lemma somewhere in the library *)
+        rewrite find_remove.
+        rewrite rw.
+        reflexivity.
+      }
+    }
+    {
+      (* x is not zero *)
+      intro x_not_zero.
+      rewrite find_add.
+      set (e := word_eq _ _).
+      case_eq e; try solve [auto].
+    }
+  Admitted.
+
   Theorem counter_wallet_correct :
     forall (income_sofar spending_sofar : word) ongoing stack,
       all_cw_corresponds ongoing stack ->
@@ -361,10 +421,30 @@ Module ExamplesOnConcreteWord.
         unfold counter_wallet_storage.
         set (spend := storage_load 1%Z _).
         (* TODO: a geneeral lemma is needed here *)
-        assert (spendH : spend = spending_sofar) by admit.
+        assert (spendH : spend = spending_sofar).
+        {
+          unfold spend.
+          clear spend.
+          rewrite storage_load_store.
+          rewrite ST.E.eq_refl.
+          reflexivity.
+        }
         rewrite spendH.
         set (income := storage_load 0%Z _).
-        assert (incomeH : income = income_sofar) by admit.
+        assert (incomeH : income = income_sofar).
+        {
+          unfold income.
+          rewrite storage_load_store.
+          set (e := word_eq _ _).
+          compute in e.
+          unfold e.
+          clear e.
+          rewrite storage_load_store.
+          set (e := word_eq _ _).
+          compute in e.
+          unfold e.
+          reflexivity.
+        }
         rewrite incomeH.
         rewrite !addsub.
         rewrite addK.
@@ -497,11 +577,34 @@ Module ExamplesOnConcreteWord.
                   set (new_ongoing := _ :: ongoing).
                   unfold update_balance.
                   rewrite address_eq_refl.
+
                   set (new_balance := if (_ : bool) then _ else _).
                   set (new_sp := ZModulo.add spending_sofar _).
                   assert (S : new_storage = counter_wallet_storage income_sofar new_sp) by admit.
                   rewrite S.
-                  assert (B : new_balance = word_sub income_sofar new_sp) by admit.
+                  assert (B : new_balance = word_sub income_sofar new_sp).
+                  {
+                    clear ongoing ongoingH I new_ongoing.
+                    set (self := address_eq _ _) in new_balance.
+                    case_eq self.
+                    {
+                      (* the receiver is the self, easier case *)
+                      intro selfT.
+                      unfold new_balance.
+                      rewrite selfT.
+                      set (self' := address_eq _ _).
+                      assert (K : self' = true) by admit.
+                      rewrite K.
+                      unfold new_sp.
+                      (* the balance does not match. *)
+                      (* TODO: investigate why this case analysis
+                       * happens at all *)
+                      admit.
+                    }
+                    {
+                      admit.
+                    }
+                  }
                   rewrite B.
                   apply (counter_wallet_correct income_sofar new_sp).
 
@@ -559,23 +662,46 @@ Module ExamplesOnConcreteWord.
                   simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   simpl.
-                  assert (Z : word_iszero (callenv_value callenv) = true) by admit.
+                  assert (Z : word_iszero (callenv_value callenv) = true)
+                  by assumption.
                   rewrite Z.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
                   unfold datasize.
                   simpl.
                   set (s64 := word_smaller _ _).
-                  assert (S : s64 = false) by admit.
+                  assert (S : s64 = false).
+                  {
+                    unfold s64.
+                    set (x := ZModulo.modulo _ _ _ ).
+                    compute in x.
+                    unfold x.
+                    (* TODO: the use of nat in data_big_enough is not good *)
+                    admit.
+                  }
+
                   rewrite S.
                   simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
                   set (cd := cut_data _ _).
-                  assert (cdH : cd = list_slice 0 32 (callenv_data callenv)) by admit.
+                  assert (cdH : cd = list_slice 32 32 (callenv_data callenv)).
+                  {
+                    unfold cd.
+                    cbn.
+                    (* TODO: define cut_data *)
+                    admit.
+                  }
                   rewrite cdH.
                   clear cdH cd.
                   set (balance_smaller := word_smaller _ _).
-                  assert (A : balance_smaller = true) by admit.
+                  assert (A : balance_smaller = true).
+                  {
+                    unfold balance_smaller.
+                    rewrite get_update_balance.
+                    Search _ word_smaller_or_eq.
+                    (* TODO: create a lemma that can transform not_enough_spec *)
+                    admit.
+                  }
                   rewrite A.
                   right.
                   eauto.
@@ -607,21 +733,25 @@ Module ExamplesOnConcreteWord.
                 unfold datasize.
                 cbn.
                 set (zero_cond := word_iszero _ ).
-                assert (Zf : zero_cond = false) by admit.
+                assert (Zf : zero_cond = false) by assumption.
                 rewrite Zf.
                 cbn.
                 simpl.
                 repeat (case s as [| s]; [ solve [left; auto] | ]).
                 cbn.
                 set (z_cond := word_iszero _).
-                assert (Zt : z_cond = true) by admit.
+                assert (Zt : z_cond = true) by assumption.
                 rewrite Zt.
                 repeat (case s as [| s]; [ solve [left; auto] | ]).
                 cbn.
                 unfold datasize.
                 cbn.
                 set (small := word_smaller _ _).
-                assert (SS : small = true) by admit.
+                assert (SS : small = true).
+                {
+                  (* TODO: use data_short *)
+                  admit.
+                }
                 rewrite SS.
                 simpl.
                 right.
