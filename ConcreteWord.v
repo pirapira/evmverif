@@ -377,8 +377,32 @@ Module ConcreteWord <: Word.
 
   Lemma word_eq_addR :
     forall a b c,
-      is_true (word_eq b c) -> word_add a b = word_add a c.
+      is_true (word_eq b c) ->
+      word_add a b = word_add a c.
   Proof.
+    intros a b c.
+    unfold word_eq.
+    Search ZnZ.compare.
+    rewrite ZnZ.spec_compare.
+    Search _ ZnZ.to_Z.
+    Search _ (_ ?= _)%Z.
+    set (comparison := (_ ?= _)%Z).
+    case_eq comparison; try congruence.
+    unfold comparison.
+    intro cH.
+    apply Z.compare_eq_iff in cH.
+    intros _.
+    unfold word_add.
+    Search _ ZnZ.add.
+    Print ZnZ.add.
+    Search _ ZModulo.add.
+    (* found a problem.
+     * Leibnitz equality is not guaranteed.
+     * So?
+     * (a) find a word library with Leibnitz equality
+     * (b) weaken the reasoning.
+     *)
+
   Admitted.
 
 End ConcreteWord.

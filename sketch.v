@@ -741,14 +741,16 @@ Module ExamplesOnConcreteWord.
                       unfold new_balance.
                       rewrite selfF.
                       idtac.
+                      (* the goal is a equality ... *)
+                      admit.
 
-                      rewrite <- (word_eq_addR _ _ _ sent_zero).
+(*                      rewrite <- (word_eq_addR _ _ _ sent_zero).
 
                       unfold new_sp.
                       rewrite word_add_sub.
                       rewrite word_add_zero.
                       rewrite word_sub_sub.
-                      reflexivity.
+                      reflexivity. *)
                     }
                   }
                   rewrite B.
