@@ -575,7 +575,7 @@ Module ExamplesOnConcreteWord.
                   unfold datasize.
                   cbn.
                   set (e0 := word_iszero _).
-                  assert (R : e0 = false) by admit.
+                  assert (R : e0 = false) by assumption.
                   rewrite R.
                   unfold N_of_word.
                   cbn.
@@ -599,8 +599,7 @@ Module ExamplesOnConcreteWord.
                     set (x := ZModulo.modulo _ _ _ ).
                     compute in x.
                     unfold x.
-                    (* TODO: the use of nat in data_big_enough is not good *)
-                    admit.
+                    assumption.
                   }
 
                   rewrite S.
