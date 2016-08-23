@@ -678,7 +678,26 @@ Module ExamplesOnConcreteWord.
                   simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
                   set (balance_smaller := word_smaller _ _).
-                  assert (F : balance_smaller = false)by admit (* use enough_balance_spec *).
+                  assert (F : balance_smaller = false).
+                  {
+                    (* use enough_balance_spec *)
+                    unfold cut_data in balance_smaller.
+                    cbn in balance_smaller.
+                    unfold balance_smaller.
+                    rewrite get_update_balance.
+                    set (idx := N_of_word _).
+                    compute in idx.
+                    unfold idx.
+                    clear idx.
+                    clear balance_smaller.
+                    cbn in enough_balance_spec_t.
+                    generalize enough_balance_spec_t.
+                    generalize word_add_sub.
+                    intro WAS.
+                    cbn in WAS.
+                    rewrite WAS.
+                    tauto.
+                  }
                   rewrite F.
                   clear F.
                   cbn.
