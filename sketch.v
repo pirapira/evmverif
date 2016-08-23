@@ -53,38 +53,13 @@ Require Import ContractSem.
 Require Import Cyclic.Abstract.CyclicAxioms.
 Require Import Coq.Lists.List.
 
-  Require Import ZArith.
+Require Import ZArith.
 
-  Require BinNums.
-  Require Cyclic.ZModulo.ZModulo.
+Require BinNums.
+Require Cyclic.ZModulo.ZModulo.
 
 (* A useful lemma to be proven *)
-Lemma addsub :
-  forall x y z,
-    ZModulo.add (ZModulo.sub x y) z =
-    ZModulo.sub (ZModulo.add x z) y.
-Proof.
-  unfold ZModulo.add.
-  unfold ZModulo.sub.
-  intros ? ? ?.
-  omega.
-Qed.
 
-
-Lemma addK :
-  forall a b, ZModulo.sub (ZModulo.add a b) b = a.
-Proof.
-  unfold ZModulo.add.
-  unfold ZModulo.sub.
-  intros ? ?; omega.
-Qed.
-
-Lemma addC (* This lemma should not enter Word. *) :
-  forall a b, ZModulo.add a b = ZModulo.add b a.
-Proof.
-  unfold ZModulo.add.
-  intros ? ?; omega.
-Qed.
 
 Require ConcreteWord.
 
@@ -415,7 +390,7 @@ Module ExamplesOnConcreteWord.
       split.
       {
         unfold counter_wallet_invariant.
-        simpl.
+        cbn.
         unfold update_balance.
         rewrite address_eq_refl.
         unfold counter_wallet_storage.
@@ -446,9 +421,15 @@ Module ExamplesOnConcreteWord.
           reflexivity.
         }
         rewrite incomeH.
-        rewrite !addsub.
-        rewrite addK.
-        apply addC.
+        generalize word_add_sub.
+        cbn.
+        intro was.
+        rewrite !was.
+        generalize word_addK.
+        intro wK.
+        cbn in wK.
+        rewrite wK.
+        apply word_addC.
       }
       {
         intro I.
@@ -483,7 +464,7 @@ Module ExamplesOnConcreteWord.
             set (prev_income := ST.find _ _).
             assert (P : prev_income = Some income_sofar) by admit.
             rewrite P.
-            set (new_income := ZModulo.add income_sofar _).
+            set (new_income := ZModulo.to_Z _ (ZModulo.add income_sofar _)).
             generalize (counter_wallet_correct new_income).
             intro IH.
             unfold counter_wallet_account_state in IH.
@@ -498,7 +479,14 @@ Module ExamplesOnConcreteWord.
             rewrite II.
             unfold update_balance.
             rewrite address_eq_refl.
-            rewrite addsub.
+            generalize word_add_sub.
+            cbn.
+            intro was.
+            rewrite was.
+            cbn in IH.
+            clear II.
+            clear was.
+            
             eapply IH.
             assumption.
           }
@@ -591,9 +579,10 @@ Module ExamplesOnConcreteWord.
                   rewrite R.
                   unfold N_of_word.
                   cbn.
-                  unfold ZModulo.to_Z.
-                  unfold ZModulo.wB.
-                  simpl.
+                  set (matched := Z.to_N (ZModulo.to_Z _ (ZModulo.modulo _ 13 256))).
+                  compute in matched.
+                  unfold matched.
+                  clear matched.                  simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   simpl.
                   assert (Z : word_iszero (callenv_value callenv) = true)
@@ -632,7 +621,10 @@ Module ExamplesOnConcreteWord.
                   {
                     unfold balance_smaller.
                     rewrite get_update_balance.
-                    rewrite word_add_sub.
+                    generalize word_add_sub.
+                    cbn.
+                    intro K.
+                    rewrite K.
                     assumption.
                   }
                   rewrite A.
@@ -709,7 +701,8 @@ Module ExamplesOnConcreteWord.
                   rewrite address_eq_refl.
 
                   set (new_balance := if (_ : bool) then _ else _).
-                  set (new_sp := ZModulo.add spending_sofar _).
+
+                  set (new_sp := ZModulo.to_Z _ (ZModulo.add spending_sofar _)).
                   assert (S : new_storage = counter_wallet_storage income_sofar new_sp).
                   {
                     unfold new_storage.
@@ -740,17 +733,16 @@ Module ExamplesOnConcreteWord.
                       intro selfF.
                       unfold new_balance.
                       rewrite selfF.
-                      idtac.
-                      (* the goal is a equality ... *)
-                      admit.
-
-(*                      rewrite <- (word_eq_addR _ _ _ sent_zero).
-
+                      clear new_balance.
                       unfold new_sp.
-                      rewrite word_add_sub.
+                      (* why does ZModulo.add appear without
+                       * ZModulo.to_Z ? *)
+
+                      (* rewrite word_add_sub.
                       rewrite word_add_zero.
                       rewrite word_sub_sub.
                       reflexivity. *)
+                      admit.
                     }
                   }
                   rewrite B.
@@ -931,7 +923,7 @@ Module ExamplesOnConcreteWord.
 
         repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
 
-        assert (Q : word_iszero ZModulo.one = false).
+        assert (Q : word_iszero (ZModulo.to_Z ALEN.p ZModulo.one) = false).
         {
           compute.
           auto.

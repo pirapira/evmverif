@@ -53,18 +53,18 @@ Module ConcreteWord <: Word.
   Definition word_eq (a : W.t) (b : W.t) :=
     match ZnZ.compare a b with Eq => true | _ => false end.
 
+  (* with [ZnZ.to_Z], the result is guaranteed to be small,
+   * and this makes rewriting easier *)
   Definition word_add (a b : W.t) :=
-    ZnZ.add a b.
+    ZnZ.to_Z (ZnZ.add a b).
 
-  Arguments word_add a b /.
+  Definition word_mul (a b : W.t) := ZnZ.to_Z (ZnZ.mul a b).
 
-  Definition word_mul (a b : W.t) := ZnZ.mul a b.
+  Definition word_sub a b := ZnZ.to_Z (ZnZ.sub a b).
 
-  Definition word_sub := ZnZ.sub.
+  Definition word_one := ZnZ.to_Z (ZnZ.one).
 
-  Definition word_one := ZnZ.one.
-
-  Definition word_zero := ZnZ.zero.
+  Definition word_zero := ZnZ.to_Z (ZnZ.zero).
 
   Definition word_iszero := word_eq word_zero.
 
@@ -382,10 +382,7 @@ Module ConcreteWord <: Word.
   Proof.
     intros a b c.
     unfold word_eq.
-    Search ZnZ.compare.
     rewrite ZnZ.spec_compare.
-    Search _ ZnZ.to_Z.
-    Search _ (_ ?= _)%Z.
     set (comparison := (_ ?= _)%Z).
     case_eq comparison; try congruence.
     unfold comparison.
@@ -393,16 +390,19 @@ Module ConcreteWord <: Word.
     apply Z.compare_eq_iff in cH.
     intros _.
     unfold word_add.
-    Search _ ZnZ.add.
-    Print ZnZ.add.
-    Search _ ZModulo.add.
-    (* found a problem.
-     * Leibnitz equality is not guaranteed.
-     * So?
-     * (a) find a word library with Leibnitz equality
-     * (b) weaken the reasoning.
-     *)
+    rewrite !ZnZ.spec_add.
+    rewrite cH.
+    reflexivity.
+  Qed.
 
+  Lemma word_addK :
+    forall a b, word_sub (word_add a b) b = a.
+  Proof.
+  Admitted.
+
+  Lemma word_addC :
+    forall a b, word_add a b = word_add b a.
+  Proof.
   Admitted.
 
 End ConcreteWord.
