@@ -261,14 +261,14 @@ Record variable_env :=
 (* [update_balance adr v original] is similar to [original] except
    that [adr] is mapped to [v].
 *)
-Definition update_balance (a : address) (newbal : word)
+Definition update_balance (a : address) (newbal : word -> word)
            (orig : address -> word) : (address -> word) :=
   fun (query : address) =>
-    if address_eq a query then newbal else orig query.
+    if address_eq a query then newbal (orig query) else orig query.
 
 Lemma get_update_balance :
-  forall addr value original,
-    update_balance addr value original addr = value.
+  forall addr f original,
+    update_balance addr f original addr = f (original addr).
 Proof.
   intros addr value original.
   unfold update_balance.
@@ -556,9 +556,9 @@ Definition call (v : variable_env) (c : constant_env) : instruction_result :=
            venv_prg_sfx := drop_one_element (v.(venv_prg_sfx));
            venv_balance :=
              (update_balance (address_of_word e1)
-                             (word_add (v.(venv_balance) (address_of_word e1)) e2)
+                             (fun orig => word_add orig e2)
              (update_balance c.(cenv_this)
-                (word_sub (v.(venv_balance) (c.(cenv_this))) e2) v.(venv_balance)));
+                (fun orig => word_sub orig e2) v.(venv_balance)));
            venv_caller := v.(venv_caller);
            venv_value_sent := v.(venv_value_sent) ;
            venv_data_sent := v.(venv_data_sent) ;
@@ -693,7 +693,7 @@ Definition build_venv_called (a : account_state) (env : call_env) :
       venv_storage := a.(account_storage) ;
       venv_balance :=
         update_balance a.(account_address)
-                           (word_add a.(account_balance) env.(callenv_value))
+                           (fun _ => (word_add a.(account_balance) env.(callenv_value)))
                            env.(callenv_balance) ;
       venv_caller := env.(callenv_caller) ;
       venv_value_sent := env.(callenv_value) ;
@@ -705,7 +705,7 @@ Definition build_venv_called (a : account_state) (env : call_env) :
          * this 'update_balance' should be a NO-OP
          *)
         update_balance a.(account_address)
-                           a.(account_balance)
+                           (fun _ => a.(account_balance))
                            env.(callenv_balance) ;
    |}.
 
@@ -729,7 +729,7 @@ Definition build_venv_returned
     Some
       (venv_update_whole_storage a.(account_storage)
       (venv_update_balance
-         (update_balance a.(account_address) a.(account_balance) r.(return_balance))
+         (update_balance a.(account_address) (fun _ => a.(account_balance)) r.(return_balance))
       (venv_update_stack (word_one :: recovered.(venv_stack))
                          recovered)))
          (* TODO: actually, need to update the memory *)

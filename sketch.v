@@ -723,13 +723,44 @@ Module ExamplesOnConcreteWord.
                       intro selfT.
                       unfold new_balance.
                       rewrite selfT.
-                      set (self' := address_eq _ _).
-                      assert (K : self' = true) by admit.
-                      rewrite K.
                       unfold new_sp.
-                      (* the balance does not match. *)
+                      generalize word_add_zero.
+                      intro T.
+                      cbn in T.
+                      rewrite (T _ _ sent_zero).
+                      generalize word_sub_sub.
+                      clear S.
+                      intro S.
+                      cbn in S.
+                      cbn.
+                      rewrite !S.
+                      Lemma modulo_idem :
+                        forall a,
+                          ZModulo.to_Z ALEN.p (ZModulo.to_Z ALEN.p a) =
+                          ZModulo.to_Z ALEN.p a.
+                      Proof.
+                      Admitted.
+                      rewrite modulo_idem.
+                      generalize word_add_sub.
+                      intro K.
+                      cbn in K.
+                      rewrite K.
+                      clear new_balance.
+                      clear T S K.
+                      clear selfT.
+                      set (c := N_of_word _).
+                      compute in c.
+                      unfold c.
+                      clear c.
+                      generalize word_sub_sub.
+                      intro S.
+                      cbn in S.
+                      cbn.
+                      rewrite <- !S.
+
                       (* TODO: investigate why this case analysis
                        * happens at all *)
+                      (* RHS is wrong.  In this case the balance should not change *)
                       admit.
                     }
                     {
