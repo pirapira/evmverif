@@ -666,7 +666,7 @@ Module ExamplesOnConcreteWord.
                   clear matched.                  simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   simpl.
-                  assert (Z : word_iszero (callenv_value callenv) = true) by admit.
+                  assert (Z : word_iszero (callenv_value callenv) = true) by assumption.
                   rewrite Z.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   cbn.
