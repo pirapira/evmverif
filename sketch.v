@@ -732,12 +732,6 @@ Module ExamplesOnConcreteWord.
                     cbn in S.
                     cbn.
                     rewrite !S.
-                    Lemma modulo_idem :
-                      forall a,
-                        ZModulo.to_Z ALEN.p (ZModulo.to_Z ALEN.p a) =
-                        ZModulo.to_Z ALEN.p a.
-                    Proof.
-                    Admitted.
                     rewrite modulo_idem.
                     set (c := N_of_word _).
                     compute in c.

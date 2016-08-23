@@ -413,4 +413,11 @@ Module ConcreteWord <: Word.
   Proof.
   Admitted.
 
+  Lemma modulo_idem :
+    forall a,
+      ZModulo.to_Z ALEN.p (ZModulo.to_Z ALEN.p a) =
+      ZModulo.to_Z ALEN.p a.
+  Proof.
+  Admitted.
+
 End ConcreteWord.
