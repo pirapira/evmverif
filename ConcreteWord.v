@@ -375,4 +375,10 @@ Module ConcreteWord <: Word.
     admit.
   Admitted.
 
+  Lemma word_eq_addR :
+    forall a b c,
+      is_true (word_eq b c) -> word_add a b = word_add a c.
+  Proof.
+  Admitted.
+
 End ConcreteWord.

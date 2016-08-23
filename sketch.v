@@ -740,12 +740,10 @@ Module ExamplesOnConcreteWord.
                       intro selfF.
                       unfold new_balance.
                       rewrite selfF.
-                      assert (value_zero : callenv_value callenv = word_zero).
-                      {
-                        (* use sent_zero *)
-                        admit.
-                      }
-                      rewrite value_zero.
+                      idtac.
+
+                      rewrite <- (word_eq_addR _ _ _ sent_zero).
+
                       unfold new_sp.
                       rewrite word_add_sub.
                       rewrite word_add_zero.
