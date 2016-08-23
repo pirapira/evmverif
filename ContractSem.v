@@ -555,10 +555,11 @@ Definition call (v : variable_env) (c : constant_env) : instruction_result :=
            venv_storage := v.(venv_storage);
            venv_prg_sfx := drop_one_element (v.(venv_prg_sfx));
            venv_balance :=
-             (update_balance (address_of_word e1)
-                             (fun orig => word_add orig e2)
+             (* This is dealt in build_venv_called.
+                (update_balance (address_of_word e1)
+                             (fun orig => word_add orig e2) *)
              (update_balance c.(cenv_this)
-                (fun orig => word_sub orig e2) v.(venv_balance)));
+                (fun orig => word_sub orig e2) v.(venv_balance));
            venv_caller := v.(venv_caller);
            venv_value_sent := v.(venv_value_sent) ;
            venv_data_sent := v.(venv_data_sent) ;

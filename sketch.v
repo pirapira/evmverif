@@ -703,7 +703,7 @@ Module ExamplesOnConcreteWord.
                   unfold update_balance.
                   rewrite address_eq_refl.
 
-                  set (new_balance := if (_ : bool) then _ else _).
+                  set (new_balance := ZModulo.to_Z _ (ZModulo.sub _ _)).
 
                   set (new_sp := ZModulo.to_Z _ (ZModulo.add spending_sofar _)).
                   assert (S : new_storage = counter_wallet_storage income_sofar new_sp).
@@ -716,82 +716,34 @@ Module ExamplesOnConcreteWord.
                   assert (B : new_balance = word_sub income_sofar new_sp).
                   {
                     clear ongoing ongoingH I new_ongoing.
-                    set (self := address_eq _ _) in new_balance.
-                    case_eq self.
-                    {
-                      (* the receiver is the self, easier case *)
-                      intro selfT.
-                      unfold new_balance.
-                      rewrite selfT.
-                      unfold new_sp.
-                      generalize word_add_zero.
-                      intro T.
-                      cbn in T.
-                      rewrite (T _ _ sent_zero).
-                      generalize word_sub_sub.
-                      clear S.
-                      intro S.
-                      cbn in S.
-                      cbn.
-                      rewrite !S.
-                      Lemma modulo_idem :
-                        forall a,
-                          ZModulo.to_Z ALEN.p (ZModulo.to_Z ALEN.p a) =
-                          ZModulo.to_Z ALEN.p a.
-                      Proof.
-                      Admitted.
-                      rewrite modulo_idem.
-                      generalize word_add_sub.
-                      intro K.
-                      cbn in K.
-                      rewrite K.
-                      clear new_balance.
-                      clear T S K.
-                      clear selfT.
-                      set (c := N_of_word _).
-                      compute in c.
-                      unfold c.
-                      clear c.
-                      generalize word_sub_sub.
-                      intro S.
-                      cbn in S.
-                      cbn.
-                      rewrite <- !S.
-
-                      (* TODO: investigate why this case analysis
-                       * happens at all *)
-                      (* RHS is wrong.  In this case the balance should not change *)
-                      admit.
-                    }
-                    {
-                      intro selfF.
-                      unfold new_balance.
-                      rewrite selfF.
-                      clear new_balance.
-                      unfold new_sp.
-                      generalize word_add_sub.
-                      intro K.
-                      cbn in K.
-                      rewrite K.
-                      clear K.
-                      clear S.
-                      clear new_storage.
-                      generalize word_add_zero.
-                      intro S.
-                      cbn in S.
-                      rewrite S by assumption.
-                      (* this is a bit awkward,
-                       * maybe the statement should be simplified *)
-                      generalize word_sub_sub.
-                      clear S.
-                      intro S.
-                      cbn in S.
-                      cbn.
-                      rewrite !S.
-                      f_equal.
-                      rewrite word_sub_modulo.
-                      f_equal.
-                    }
+                    unfold new_balance.
+                    unfold new_sp.
+                    clear new_balance.
+                    clear S.
+                    clear new_storage.
+                    clear new_sp.
+                    clear enough_balance_spec_t.
+                    generalize word_add_zero.
+                    intro T.
+                    cbn in T.
+                    rewrite (T _ _ sent_zero).
+                    generalize word_sub_sub.
+                    intro S.
+                    cbn in S.
+                    cbn.
+                    rewrite !S.
+                    Lemma modulo_idem :
+                      forall a,
+                        ZModulo.to_Z ALEN.p (ZModulo.to_Z ALEN.p a) =
+                        ZModulo.to_Z ALEN.p a.
+                    Proof.
+                    Admitted.
+                    rewrite modulo_idem.
+                    set (c := N_of_word _).
+                    compute in c.
+                    unfold c.
+                    clear c.
+                    reflexivity.
                   }
                   rewrite B.
                   apply (counter_wallet_correct income_sofar new_sp).
