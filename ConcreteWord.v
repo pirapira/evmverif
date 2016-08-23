@@ -405,4 +405,10 @@ Module ConcreteWord <: Word.
   Proof.
   Admitted.
 
+  Lemma word_sub_modulo :
+    forall a b,
+      ZModulo.to_Z ALEN.p (ZModulo.sub (ZModulo.to_Z ALEN.p a) b) =
+      ZModulo.to_Z ALEN.p (ZModulo.sub a b).
+  Admitted.
+
 End ConcreteWord.

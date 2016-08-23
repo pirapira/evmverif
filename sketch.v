@@ -764,11 +764,6 @@ Module ExamplesOnConcreteWord.
                       cbn.
                       rewrite !S.
                       f_equal.
-                      Lemma word_sub_modulo :
-                        forall a b,
-                          ZModulo.to_Z ALEN.p (ZModulo.sub (ZModulo.to_Z ALEN.p a) b) =
-                          ZModulo.to_Z ALEN.p (ZModulo.sub a b).
-                      Admitted.
                       rewrite word_sub_modulo.
                       f_equal.
                     }
