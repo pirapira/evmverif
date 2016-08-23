@@ -660,9 +660,10 @@ Module ExamplesOnConcreteWord.
                   rewrite R.
                   unfold N_of_word.
                   cbn.
-                  unfold ZModulo.to_Z.
-                  unfold ZModulo.wB.
-                  simpl.
+                  set (matched := Z.to_N (ZModulo.to_Z _ (ZModulo.modulo _ 13 256))).
+                  compute in matched.
+                  unfold matched.
+                  clear matched.                  simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | ]).
                   simpl.
                   assert (Z : word_iszero (callenv_value callenv) = true) by admit.
@@ -697,6 +698,8 @@ Module ExamplesOnConcreteWord.
                   unfold counter_wallet_account_state in counter_wallet_correct.
                   set (new_storage := storage_store _ _ _).
                   set (new_ongoing := _ :: ongoing).
+                  (* already ZModulo.add (ZModulo.sub *)
+
                   unfold update_balance.
                   rewrite address_eq_refl.
 
@@ -735,14 +738,39 @@ Module ExamplesOnConcreteWord.
                       rewrite selfF.
                       clear new_balance.
                       unfold new_sp.
-                      (* why does ZModulo.add appear without
-                       * ZModulo.to_Z ? *)
-
-                      (* rewrite word_add_sub.
-                      rewrite word_add_zero.
-                      rewrite word_sub_sub.
-                      reflexivity. *)
-                      admit.
+                      generalize word_add_sub.
+                      intro K.
+                      cbn in K.
+                      rewrite K.
+                      clear K.
+                      clear S.
+                      clear new_storage.
+                      Lemma word_add_zero :
+                        forall a b,
+                          word_eq word_zero b = true ->
+                          word_add a b = ZModulo.to_Z ALEN.p a.
+                      Proof.
+                      Admitted.
+                      generalize word_add_zero.
+                      intro S.
+                      cbn in S.
+                      rewrite S by assumption.
+                      (* this is a bit awkward,
+                       * maybe the statement should be simplified *)
+                      generalize word_sub_sub.
+                      clear S.
+                      intro S.
+                      cbn in S.
+                      cbn.
+                      rewrite !S.
+                      f_equal.
+                      Lemma word_sub_modulo :
+                        forall a b,
+                          ZModulo.to_Z ALEN.p (ZModulo.sub (ZModulo.to_Z ALEN.p a) b) =
+                          ZModulo.to_Z ALEN.p (ZModulo.sub a b).
+                      Admitted.
+                      rewrite word_sub_modulo.
+                      f_equal.
                     }
                   }
                   rewrite B.
