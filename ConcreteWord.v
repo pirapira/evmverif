@@ -356,11 +356,6 @@ Module ConcreteWord <: Word.
 
   (** Not required by the signature but useful lemmata **)
 
-  Lemma word_add_zero :
-    forall a, word_add a word_zero = a.
-  Proof.
-  Admitted.
-
   Lemma word_sub_sub :
     forall a b c,
       word_sub a (word_add b c) = word_sub (word_sub a b) c.
@@ -409,6 +404,13 @@ Module ConcreteWord <: Word.
     forall a b,
       ZModulo.to_Z ALEN.p (ZModulo.sub (ZModulo.to_Z ALEN.p a) b) =
       ZModulo.to_Z ALEN.p (ZModulo.sub a b).
+  Admitted.
+
+  Lemma word_add_zero :
+    forall a b,
+      word_eq word_zero b = true ->
+      word_add a b = ZModulo.to_Z ALEN.p a.
+  Proof.
   Admitted.
 
 End ConcreteWord.

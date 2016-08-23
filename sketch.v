@@ -745,12 +745,6 @@ Module ExamplesOnConcreteWord.
                       clear K.
                       clear S.
                       clear new_storage.
-                      Lemma word_add_zero :
-                        forall a b,
-                          word_eq word_zero b = true ->
-                          word_add a b = ZModulo.to_Z ALEN.p a.
-                      Proof.
-                      Admitted.
                       generalize word_add_zero.
                       intro S.
                       cbn in S.
