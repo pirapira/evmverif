@@ -709,7 +709,27 @@ Module ExamplesOnConcreteWord.
                   assert (S : new_storage = counter_wallet_storage income_sofar new_sp).
                   {
                     unfold new_storage.
-                    admit.
+                    clear new_ongoing.
+                    clear new_balance.
+                    clear enough_balance_spec_t.
+                    unfold counter_wallet_storage.
+                    rewrite storage_load_store.
+                    set (e := word_eq _ 1%Z).
+                    compute in e.
+                    unfold e.
+                    clear e.
+                    set (idx := (N_of_word _)).
+                    compute in idx.
+                    unfold idx.
+                    clear idx.
+                    fold new_sp.
+                    Lemma storage_store_idem :
+                      forall a b c orig,
+                        storage_store a b (storage_store a c orig) =
+                        storage_store a b orig.
+                    Admitted.
+                    rewrite storage_store_idem.
+                    reflexivity.
                   }
 
                   rewrite S.
