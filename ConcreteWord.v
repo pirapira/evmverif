@@ -353,4 +353,26 @@ Module ConcreteWord <: Word.
 
   Definition word_of_nat :=
     BinInt.Z_of_nat.
+
+  (** Not required by the signature but useful lemmata **)
+
+  Lemma word_add_zero :
+    forall a, word_add a word_zero = a.
+  Proof.
+  Admitted.
+
+  Lemma word_sub_sub :
+    forall a b c,
+      word_sub a (word_add b c) = word_sub (word_sub a b) c.
+  Proof.
+  Admitted.
+
+  Lemma word_add_sub :
+    forall a b c,
+      word_add (word_sub a b) c =
+      word_sub (word_add a c) b.
+  Proof.
+    admit.
+  Admitted.
+
 End ConcreteWord.

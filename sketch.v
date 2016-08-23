@@ -632,13 +632,6 @@ Module ExamplesOnConcreteWord.
                   {
                     unfold balance_smaller.
                     rewrite get_update_balance.
-                    Lemma word_add_sub :
-                      forall a b c,
-                        word_add (word_sub a b) c =
-                        word_sub (word_add a c) b.
-                    Proof.
-                      admit.
-                    Admitted.
                     rewrite word_add_sub.
                     assumption.
                   }
@@ -755,16 +748,7 @@ Module ExamplesOnConcreteWord.
                       rewrite value_zero.
                       unfold new_sp.
                       rewrite word_add_sub.
-                      Lemma word_add_zero :
-                        forall a, word_add a word_zero = a.
-                      Proof.
-                      Admitted.
                       rewrite word_add_zero.
-                      Lemma word_sub_sub :
-                        forall a b c,
-                          word_sub a (word_add b c) = word_sub (word_sub a b) c.
-                      Proof.
-                      Admitted.
                       rewrite word_sub_sub.
                       reflexivity.
                     }
