@@ -656,7 +656,7 @@ Module ExamplesOnConcreteWord.
                   unfold datasize.
                   cbn.
                   set (e0 := word_iszero _).
-                  assert (R : e0 = false) by admit.
+                  assert (R : e0 = false) by assumption.
                   rewrite R.
                   unfold N_of_word.
                   cbn.
