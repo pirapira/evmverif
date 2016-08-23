@@ -673,7 +673,7 @@ Module ExamplesOnConcreteWord.
                   unfold datasize.
                   cbn.
                   set (s64 := word_smaller _ _).
-                  assert (S : s64 = false) by admit.
+                  assert (S : s64 = false) by assumption.
                   rewrite S.
                   simpl.
                   repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
