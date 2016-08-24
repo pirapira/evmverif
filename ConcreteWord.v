@@ -420,4 +420,10 @@ Module ConcreteWord <: Word.
   Proof.
   Admitted.
 
+  Lemma storage_store_idem :
+    forall a b c orig,
+      storage_store a b (storage_store a c orig) =
+      storage_store a b orig.
+  Admitted.
+
 End ConcreteWord.

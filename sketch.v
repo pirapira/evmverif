@@ -741,11 +741,6 @@ Module ExamplesOnConcreteWord.
                     unfold idx.
                     clear idx.
                     fold new_sp.
-                    Lemma storage_store_idem :
-                      forall a b c orig,
-                        storage_store a b (storage_store a c orig) =
-                        storage_store a b orig.
-                    Admitted.
                     rewrite storage_store_idem.
                     reflexivity.
                   }
