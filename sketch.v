@@ -459,10 +459,15 @@ Module ExamplesOnConcreteWord.
           {
             cbn.
             unfold counter_wallet_storage.
-            unfold storage_load.
-            unfold ZModulo.zero.
-            set (prev_income := ST.find _ _).
-            assert (P : prev_income = Some income_sofar) by admit.
+            set (prev_income := storage_load _ _).
+            assert (P : prev_income = income_sofar).
+            {
+              unfold prev_income.
+              (* why does it contain ST.find *)
+              rewrite storage_store_reorder by (compute; auto).
+              rewrite storage_load_store.
+              reflexivity.
+            }
             rewrite P.
             set (new_income := ZModulo.to_Z _ (ZModulo.add income_sofar _)).
             generalize (counter_wallet_correct new_income).
