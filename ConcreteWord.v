@@ -426,6 +426,66 @@ Module ConcreteWord <: Word.
       storage_store a b orig.
   Admitted.
 
+  Lemma find_remove :
+    forall a b orig,
+      ST.find (elt:=word) a (ST.remove b orig) =
+      if (word_eq a b) then None
+      else ST.find (elt := word) a orig.
+  Proof.
+    intros a b orig.
+    admit.
+  Admitted.
+
+  Lemma find_add :
+    forall a b c orig,
+      ST.find (elt:=word) a (ST.add b c orig) =
+      if (word_eq a b) then Some c
+      else ST.find (elt := word) a orig.
+  Proof.
+    intros a b c orig.
+    admit.
+  Admitted.
+
+  Lemma storage_load_store :
+    forall r w x orig,
+      storage_load r (storage_store w x orig) =
+      if word_eq r w then x else storage_load r orig.
+  Proof.
+    intros r w x orig.
+    unfold storage_load.
+    unfold storage_store.
+    case_eq (word_eq word_zero x).
+    {
+      intro x_zero.
+      case_eq (word_eq r w).
+      { (* r is w *)
+        intro rw.
+        assert (H : r = w) by admit.
+        subst.
+        set (found := ST.find _ _).
+        assert (H : found = None) by admit.
+        rewrite H.
+        (* use x_zero; a lemma for concrete word is needed *)
+        admit.
+      }
+      {
+        (* r is not w *)
+        intro rw.
+        (* move this lemma somewhere in the library *)
+        rewrite find_remove.
+        rewrite rw.
+        reflexivity.
+      }
+    }
+    {
+      (* x is not zero *)
+      intro x_not_zero.
+      rewrite find_add.
+      set (e := word_eq _ _).
+      case_eq e; try solve [auto].
+    }
+  Admitted.
+
   Lemma storage_store_reorder :
     forall ak av bk bv orig,
       word_eq ak bk = false ->
