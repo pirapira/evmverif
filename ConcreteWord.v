@@ -426,4 +426,11 @@ Module ConcreteWord <: Word.
       storage_store a b orig.
   Admitted.
 
+  Lemma storage_store_reorder :
+    forall ak av bk bv orig,
+      word_eq ak bk = false ->
+      storage_store ak av (storage_store bk bv orig) =
+      storage_store bk bv (storage_store ak av orig).
+  Admitted.
+
 End ConcreteWord.

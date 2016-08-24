@@ -475,7 +475,12 @@ Module ExamplesOnConcreteWord.
                                (ST.empty word))) =
                          (storage_store 1%Z spending_sofar
                             (storage_store 0%Z new_income
-                               (ST.empty word)))) by admit.
+                               (ST.empty word)))).
+            {
+              rewrite storage_store_reorder by solve [compute; auto].
+              rewrite storage_store_idem.
+              reflexivity.
+            }
             rewrite II.
             unfold update_balance.
             rewrite address_eq_refl.
