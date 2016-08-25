@@ -114,100 +114,98 @@ Module ExamplesOnConcreteWord.
 
 
   (* TODO:
-     this has to remember the states in the stack as well *)
-  (* TODO:
      why can't this be computed from the bytecode easily...
      which is called the static symbolic execution... *)
-  CoFixpoint counter_wallet (income_sofar : word) (spending_sofar : word)
+  CoFixpoint managed_account_with_accumulators (income_sofar : word) (spending_sofar : word)
              (stack : list (word * word))
     : response_to_world :=
     Respond
       (fun cenv =>
          match word_eq word_zero (word_of_nat (length (callenv_data cenv))) with
-         | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
+         | true => receive_eth (managed_account_with_accumulators (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
              if word_smaller (word_of_nat (List.length cenv.(callenv_data))) 64%Z then
-               failing_action (counter_wallet income_sofar spending_sofar stack)
+               failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
              else
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
                if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
                  failing_action
-                   (counter_wallet income_sofar spending_sofar stack)
+                   (managed_account_with_accumulators income_sofar spending_sofar stack)
                else
                  sending_action addr value
-                                (counter_wallet income_sofar (word_add spending_sofar value)
+                                (managed_account_with_accumulators income_sofar (word_add spending_sofar value)
                                                 ((income_sofar, spending_sofar) :: stack))
            else
-             failing_action (counter_wallet income_sofar spending_sofar stack)
+             failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
          end
       )
       (fun returned =>
          match stack with
          | _ :: new_stack =>
              ContractAction (ContractReturn nil)
-                            (counter_wallet income_sofar spending_sofar new_stack)
+                            (managed_account_with_accumulators income_sofar spending_sofar new_stack)
          | nil =>
-           failing_action (counter_wallet income_sofar spending_sofar stack)
+           failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
          end
       )
       (
         match stack with
         | (income_old, spending_old) :: new_stack =>
-          failing_action (counter_wallet income_old spending_old new_stack)
+          failing_action (managed_account_with_accumulators income_old spending_old new_stack)
         | nil =>
-          failing_action (counter_wallet income_sofar spending_sofar stack)
+          failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
         end
       )
       .
 
-  Lemma counter_wallet_def :
+  Lemma managed_account_with_accumulators_def :
     forall income_sofar spending_sofar stack,
-      counter_wallet income_sofar spending_sofar stack =
+      managed_account_with_accumulators income_sofar spending_sofar stack =
     Respond
       (fun cenv =>
          match word_eq word_zero (word_of_nat (length (callenv_data cenv))) with
-         | true => receive_eth (counter_wallet (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
+         | true => receive_eth (managed_account_with_accumulators (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
          | false =>
            if word_eq word_zero (cenv.(callenv_value)) then
              if word_smaller (word_of_nat (List.length cenv.(callenv_data))) 64%Z then
-               failing_action (counter_wallet income_sofar spending_sofar stack)
+               failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
              else
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
                if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
                  failing_action
-                   (counter_wallet income_sofar spending_sofar stack)
+                   (managed_account_with_accumulators income_sofar spending_sofar stack)
                else
                  sending_action addr value
-                                (counter_wallet income_sofar (word_add spending_sofar value)
+                                (managed_account_with_accumulators income_sofar (word_add spending_sofar value)
                                                 ((income_sofar, spending_sofar) :: stack))
            else
-             failing_action (counter_wallet income_sofar spending_sofar stack)
+             failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
          end
       )
       (fun returned =>
          match stack with
          | _ :: new_stack =>
              ContractAction (ContractReturn nil)
-                            (counter_wallet income_sofar spending_sofar new_stack)
+                            (managed_account_with_accumulators income_sofar spending_sofar new_stack)
          | nil =>
-           failing_action (counter_wallet income_sofar spending_sofar stack)
+           failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
          end
       )
       (
         match stack with
         | (income_old, spending_old) :: new_stack =>
-          failing_action (counter_wallet income_old spending_old new_stack)
+          failing_action (managed_account_with_accumulators income_old spending_old new_stack)
         | nil =>
-          failing_action (counter_wallet income_sofar spending_sofar stack)
+          failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
         end
       )
       .
   Proof.
     intros i s stack.
-    unfold counter_wallet.
+    unfold managed_account_with_accumulators.
     apply response_expander_eq.
   Qed.
 
@@ -216,7 +214,7 @@ Module ExamplesOnConcreteWord.
   Arguments plus_size_label /.
 
   (* TODO: add owner as an immediate value and check it *)
-  Definition counter_wallet_code : program :=
+  Definition managed_account_with_accumulators_code : program :=
     CALLDATASIZE ::
       PUSH1 plus_size_label ::
         JUMPI ::
@@ -262,27 +260,27 @@ Module ExamplesOnConcreteWord.
     nil.
 
 
-  Definition counter_wallet_invariant (v : variable_env) (c : constant_env) : Prop :=
+  Definition managed_account_with_accumulators_invariant (v : variable_env) (c : constant_env) : Prop :=
       word_add (v.(venv_balance) c.(cenv_this)) (storage_load 1%Z v.(venv_storage))
     = word_add v.(venv_value_sent) (storage_load 0%Z v.(venv_storage)).
 
-  Axiom counter_wallet_address : address.
+  Axiom managed_account_with_accumulators_address : address.
 
-  Definition counter_wallet_storage (income_sofar spending_sofar : word) : storage :=
+  Definition managed_account_with_accumulators_storage (income_sofar spending_sofar : word) : storage :=
     storage_store 1%Z spending_sofar (storage_store 0%Z income_sofar (ST.empty word))
     .
 
-  Definition counter_wallet_account_state (income_sofar spending_sofar : word) (going_calls : list variable_env) : account_state :=
+  Definition managed_account_with_accumulators_account_state (income_sofar spending_sofar : word) (going_calls : list variable_env) : account_state :=
     {|
-      account_address := counter_wallet_address (* TODO: declare this in a section *);
-      account_storage := counter_wallet_storage income_sofar spending_sofar ;
-      account_code := counter_wallet_code ;
+      account_address := managed_account_with_accumulators_address (* TODO: declare this in a section *);
+      account_storage := managed_account_with_accumulators_storage income_sofar spending_sofar ;
+      account_code := managed_account_with_accumulators_code ;
       account_balance := word_sub income_sofar spending_sofar ;
       account_ongoing_calls := going_calls
     |}
     .
 
-  Record counter_wallet_calling_state (income_for_reset : word) (spending_for_reset : word) (v : variable_env) : Prop :=
+  Record managed_account_with_accumulators_calling_state (income_for_reset : word) (spending_for_reset : word) (v : variable_env) : Prop :=
     {
       cw_calling_prg_sfx :
         (v.(venv_prg_sfx) =
@@ -292,11 +290,11 @@ Module ExamplesOnConcreteWord.
              STOP ::
              nil) ;
       cw_calling_balance :
-        venv_balance_at_call v counter_wallet_address =
+        venv_balance_at_call v managed_account_with_accumulators_address =
         word_sub income_for_reset spending_for_reset ;
       cw_calling_storage :
         v.(venv_storage_at_call) =
-         counter_wallet_storage income_for_reset spending_for_reset
+         managed_account_with_accumulators_storage income_for_reset spending_for_reset
     }.
 
   (* TODO: define this *)
@@ -305,35 +303,35 @@ Module ExamplesOnConcreteWord.
   | acc_nil : all_cw_corresponds nil nil
   | acc_cons :
       forall hd_venv tail_venvs hd_income hd_spending tail_stack,
-        counter_wallet_calling_state hd_income hd_spending hd_venv ->
+        managed_account_with_accumulators_calling_state hd_income hd_spending hd_venv ->
         all_cw_corresponds tail_venvs tail_stack ->
         all_cw_corresponds (hd_venv :: tail_venvs)
                          ((hd_income, hd_spending) :: tail_stack)
   .
 
-  Theorem counter_wallet_correct :
+  Theorem managed_account_with_accumulators_correct :
     forall (income_sofar spending_sofar : word) ongoing stack,
       all_cw_corresponds ongoing stack ->
       account_state_responds_to_world
-        (counter_wallet_account_state income_sofar spending_sofar ongoing)
-        (counter_wallet income_sofar spending_sofar stack)
-        counter_wallet_invariant.
+        (managed_account_with_accumulators_account_state income_sofar spending_sofar ongoing)
+        (managed_account_with_accumulators income_sofar spending_sofar stack)
+        managed_account_with_accumulators_invariant.
     (* TODO: strengthen the statement so that coinduction goes through. *)
   Proof.
     cofix.
     intros income_sofar spending_sofar ongoing stack ongoingH.
-    rewrite counter_wallet_def.
+    rewrite managed_account_with_accumulators_def.
     apply AccountStep.
     {
       unfold respond_to_call_correctly.
       intros callenv act cont.
       split.
       {
-        unfold counter_wallet_invariant.
+        unfold managed_account_with_accumulators_invariant.
         cbn.
         unfold update_balance.
         rewrite address_eq_refl.
-        unfold counter_wallet_storage.
+        unfold managed_account_with_accumulators_storage.
         set (spend := storage_load 1%Z _).
         (* TODO: a geneeral lemma is needed here *)
         assert (spendH : spend = spending_sofar).
@@ -398,7 +396,7 @@ Module ExamplesOnConcreteWord.
           }
           {
             cbn.
-            unfold counter_wallet_storage.
+            unfold managed_account_with_accumulators_storage.
             set (prev_income := storage_load _ _).
             assert (P : prev_income = income_sofar).
             {
@@ -410,10 +408,10 @@ Module ExamplesOnConcreteWord.
             }
             rewrite P.
             set (new_income := ZModulo.to_Z _ (ZModulo.add income_sofar _)).
-            generalize (counter_wallet_correct new_income).
+            generalize (managed_account_with_accumulators_correct new_income).
             intro IH.
-            unfold counter_wallet_account_state in IH.
-            unfold counter_wallet_storage in IH.
+            unfold managed_account_with_accumulators_account_state in IH.
+            unfold managed_account_with_accumulators_storage in IH.
             assert (II : storage_store 0%Z new_income
                          (storage_store 1%Z spending_sofar
                             (storage_store 0%Z income_sofar
@@ -497,7 +495,7 @@ Module ExamplesOnConcreteWord.
                 cbn.
                 unfold update_balance.
                 rewrite address_eq_refl.
-                apply counter_wallet_correct.
+                apply managed_account_with_accumulators_correct.
                 assumption.
               }
             }
@@ -582,10 +580,10 @@ Module ExamplesOnConcreteWord.
                 }
                 {
                   simpl.
-                  unfold counter_wallet_account_state in counter_wallet_correct.
+                  unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
                   unfold update_balance.
                   rewrite address_eq_refl.
-                  apply counter_wallet_correct.
+                  apply managed_account_with_accumulators_correct.
                   assumption.
                 }
               }
@@ -663,7 +661,7 @@ Module ExamplesOnConcreteWord.
                   cbn.
                   unfold cut_data.
                   cbn.
-                  unfold counter_wallet_account_state in counter_wallet_correct.
+                  unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
                   set (new_storage := storage_store _ _ _).
                   set (new_ongoing := _ :: ongoing).
                   (* already ZModulo.add (ZModulo.sub *)
@@ -674,13 +672,13 @@ Module ExamplesOnConcreteWord.
                   set (new_balance := ZModulo.to_Z _ (ZModulo.sub _ _)).
 
                   set (new_sp := ZModulo.to_Z _ (ZModulo.add spending_sofar _)).
-                  assert (S : new_storage = counter_wallet_storage income_sofar new_sp).
+                  assert (S : new_storage = managed_account_with_accumulators_storage income_sofar new_sp).
                   {
                     unfold new_storage.
                     clear new_ongoing.
                     clear new_balance.
                     clear enough_balance_spec_t.
-                    unfold counter_wallet_storage.
+                    unfold managed_account_with_accumulators_storage.
                     rewrite storage_load_store.
                     set (e := word_eq _ 1%Z).
                     compute in e.
@@ -723,7 +721,7 @@ Module ExamplesOnConcreteWord.
                     reflexivity.
                   }
                   rewrite B.
-                  apply (counter_wallet_correct income_sofar new_sp).
+                  apply (managed_account_with_accumulators_correct income_sofar new_sp).
 
                   unfold new_ongoing.
                   apply acc_cons.
@@ -802,7 +800,7 @@ Module ExamplesOnConcreteWord.
                 cbn.
                 unfold update_balance.
                 rewrite address_eq_refl.
-                apply counter_wallet_correct.
+                apply managed_account_with_accumulators_correct.
                 assumption.
             }
           }
@@ -819,7 +817,7 @@ Module ExamplesOnConcreteWord.
       inversion H; subst.
       clear H.
       unfold build_venv_returned in venvH.
-      unfold counter_wallet_account_state in venvH.
+      unfold managed_account_with_accumulators_account_state in venvH.
       cbn in venvH.
       case ongoing as [| recovered rest_ongoing]; try congruence.
       inversion ongoingH; subst.
@@ -850,12 +848,12 @@ Module ExamplesOnConcreteWord.
       }
       {
         unfold update_account_state.
-        unfold counter_wallet_account_state in counter_wallet_correct.
+        unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
         unfold account_state_update_storage.
         simpl.
 
         rewrite get_update_balance.
-        apply (counter_wallet_correct income_sofar spending_sofar
+        apply (managed_account_with_accumulators_correct income_sofar spending_sofar
                                            rest_ongoing tail_stack).
         assumption.
       }
@@ -914,9 +912,9 @@ Module ExamplesOnConcreteWord.
         unfold update_account_state.
         cbn.
 
-        generalize (counter_wallet_correct hd_income hd_spending
+        generalize (managed_account_with_accumulators_correct hd_income hd_spending
                                            ongoing_tail tail_stack).
-        unfold counter_wallet_account_state.
+        unfold managed_account_with_accumulators_account_state.
         case H2; clear H2.
         intros sfx_eq balance_eq storage_eq.
         rewrite storage_eq.
