@@ -757,7 +757,12 @@ Definition build_venv_fail
   match a.(account_ongoing_calls) with
   | nil => None
   | recovered :: _ =>
-    Some (venv_update_stack (word_zero :: recovered.(venv_stack)) recovered)
+    Some
+      (* TODO: the balance should be recovered.
+       * When a call fails, the sent-along value
+       * should be returned.
+       *)
+      (venv_update_stack (word_zero :: recovered.(venv_stack)) recovered)
   end.
 
 Arguments build_venv_fail a /.
