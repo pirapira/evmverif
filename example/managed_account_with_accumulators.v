@@ -26,6 +26,8 @@
  *
  * There is no particular prevention of re-entrancy, but the invariant holds
  * regardless of how deeply the execution is nested.
+ *
+ * See ../readme.md for how to machine-check the proofs.
  *)
 
 (** Some Coq library imports **)
@@ -904,9 +906,7 @@ Proof.
     inversion ongoingH; subst.
     (* I don't like the generated names... *)
     (* TODO: create a theorem instead of inversion ongoingH *)
-
-    case H2.
-    clear H2.
+    case H2; clear H2.
     intros sfx_eq bal_eq.
     inversion H1; subst.
 
