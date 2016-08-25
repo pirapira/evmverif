@@ -24,7 +24,7 @@
  * data[32-63] is used as the amount of spending.
  * In this case storage[1] should be increased.
  *
- * There is no particular prevention of re-entrancy, but the invariant holds
+ * There is no particular prevention of re-entrance, but the invariant holds
  * regardless of how deeply the execution is nested.
  *
  * See ../readme.md for how to machine-check the proofs.
