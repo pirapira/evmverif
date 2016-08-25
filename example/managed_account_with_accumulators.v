@@ -55,6 +55,7 @@ Definition plus_size_label : word := 13%Z.
 Arguments plus_size_label /.
 
 (* TODO: add owner as an immediate value and check it *)
+(* The indentation shows the depth of the stack. *)
 Definition managed_account_with_accumulators_code (owner : word) : program :=
   CALLDATASIZE ::
     PUSH1 plus_size_label ::
@@ -319,7 +320,6 @@ Theorem managed_account_with_accumulators_correct :
       (managed_account_with_accumulators_account_state owner income_sofar spending_sofar ongoing)
       (managed_account_with_accumulators owner income_sofar spending_sofar stack)
       managed_account_with_accumulators_invariant.
-  (* TODO: strengthen the statement so that coinduction goes through. *)
 Proof.
   cofix.
   intros owner income_sofar spending_sofar ongoing stack ongoingH.
@@ -748,7 +748,7 @@ Proof.
                 unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
                 set (new_storage := storage_store _ _ _).
                 set (new_ongoing := _ :: ongoing).
-                (* already ZModulo.add (ZModulo.sub *)
+
 
                 unfold update_balance.
                 rewrite address_eq_refl.
