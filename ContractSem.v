@@ -1,6 +1,12 @@
 Require Import NArith.
 Require Import Word.
 
+(* This module can be instantiated into some concrete ways and some more abstract ways. *)
+(* A word can be a tuple of 256 booleans. *)
+(* Alternatively a word can be thought of as some abstract values.
+ * This would be interesting in bytecode analysis tools.
+ *)
+(* Many aspects of the EVM semantics do not care how words are represented. *)
 Module Make (W : Word).
 Export W.
 
