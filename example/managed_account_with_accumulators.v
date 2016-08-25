@@ -22,7 +22,7 @@
  * In this case,
  * data[12-31] is interpreted as the address of recipient.
  * data[32-63] is used as the amount of spending.
- * In this case storage[1' should be increased.
+ * In this case storage[1] should be increased.
  *
  * There is no particular prevention of re-entrancy, but the invariant holds
  * regardless of how deeply the execution is nested.
