@@ -9,6 +9,9 @@ sketch.vo: Word.vo sketch.v ContractSem.vo ConcreteWord.vo
 example/call_but_fail_on_reentrance.vo: example/call_but_fail_on_reentrance.v ContractSem.vo Word.vo ConcreteWord.vo
 	coqc example/call_but_fail_on_reentrance.v
 
+example/managed_account_with_accumulators.vo: example/managed_account_with_accumulators.v ContractSem.vo Word.vo ConcreteWord.vo
+	coqc example/managed_account_with_accumulators.v
+
 ConcreteWord.vo: ConcreteWord.v Word.vo
 	coqc ConcreteWord.v
 
