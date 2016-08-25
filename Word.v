@@ -30,6 +30,7 @@ Module Type Word.
   Parameter byte : Type.
   Parameter address : Type.
   Parameter address_of_word : word -> address.
+  Parameter word_of_address : address -> word.
   Parameter address_eq : address -> address -> bool.
   Parameter address_eq_refl : forall (a : address), address_eq a a = true.
 

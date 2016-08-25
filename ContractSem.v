@@ -193,6 +193,7 @@ Fixpoint specification_run (w : world) (r : response_to_world) : history :=
 Inductive instruction :=
 | PUSH1 : word -> instruction
 | PUSH2 : word -> instruction
+| PUSH32 : word -> instruction
 | SLOAD
 | SSTORE
 | JUMP
@@ -201,6 +202,7 @@ Inductive instruction :=
 | CALLDATASIZE
 | CALLDATALOAD
 | CALLVALUE
+| CALLER
 | ADD
 | SUB
 | ISZERO
@@ -211,6 +213,7 @@ Inductive instruction :=
 | POP
 | GASLIMIT
 | instr_GT
+| instr_EQ
 .
 
 (**
@@ -605,6 +608,8 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
     stack_0_1_op v c (word_mod w (word_of_N 256%N))
   | PUSH2 w =>
     stack_0_1_op v c (word_mod w (word_mul (word_of_N 256%N) (word_of_N 256%N)))
+  | PUSH32 w =>
+    stack_0_1_op v c w
   | SLOAD => stack_1_1_op v c (sload v)
   | SSTORE => sstore v c
   | JUMPI => jumpi v c
@@ -613,6 +618,7 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | CALLDATASIZE => stack_0_1_op v c (datasize v)
   | CALLDATALOAD => stack_1_1_op v c (cut_data v)
   | CALLVALUE => stack_0_1_op v c v.(venv_value_sent)
+  | CALLER => stack_0_1_op v c (word_of_address v.(venv_caller))
   | ADD => stack_2_1_op v c word_add
   | SUB => stack_2_1_op v c word_sub
   | ISZERO => stack_1_1_op v c (compose bool_to_word word_iszero)
@@ -623,6 +629,7 @@ Definition instruction_sem (v : variable_env) (c : constant_env) (i : instructio
   | POP => pop v c
   | GASLIMIT => stack_0_1_op v c (gas_limit v)
   | instr_GT => stack_2_1_op v c (fun a b => bool_to_word (word_smaller b a))
+  | instr_EQ => stack_2_1_op v c (fun a b => bool_to_word (word_eq a b))
   end.
 
 Inductive program_result :=

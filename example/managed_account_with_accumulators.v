@@ -39,7 +39,7 @@ Definition plus_size_label : word := 13%Z.
 Arguments plus_size_label /.
 
 (* TODO: add owner as an immediate value and check it *)
-Definition managed_account_with_accumulators_code : program :=
+Definition managed_account_with_accumulators_code (owner : word) : program :=
   CALLDATASIZE ::
     PUSH1 plus_size_label ::
       JUMPI ::
@@ -61,6 +61,12 @@ Definition managed_account_with_accumulators_code : program :=
       instr_GT ::
     PUSH1 (0%Z) ::
       JUMPI (* data too small *) ::
+  PUSH32 owner ::
+    CALLER ::
+      instr_EQ ::
+    ISZERO ::
+    PUSH1 word_zero (* invalid destination *) ::
+      JUMPI (* caller is not the owner *) ::
   PUSH1 (0%Z) (* out size *) ::
     PUSH1 (0%Z) (* out offset *) ::
       PUSH1 (0%Z) (* out size *) ::
@@ -116,95 +122,109 @@ Definition sending_action (recipient : word) value cont : contract_behavior :=
 (* TODO:
    why can't this be computed from the bytecode easily...
    which is called the static symbolic execution... *)
-CoFixpoint managed_account_with_accumulators (income_sofar : word) (spending_sofar : word)
+CoFixpoint managed_account_with_accumulators (owner : word) (income_sofar : word) (spending_sofar : word)
            (stack : list (word * word))
   : response_to_world :=
   Respond
     (fun cenv =>
        match word_eq word_zero (word_of_nat (length (callenv_data cenv))) with
-       | true => receive_eth (managed_account_with_accumulators (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
+       | true => receive_eth
+                   (managed_account_with_accumulators owner
+                                                      (word_add income_sofar cenv.(callenv_value))
+                                                      spending_sofar stack)
        | false =>
          if word_eq word_zero (cenv.(callenv_value)) then
            if word_smaller (word_of_nat (List.length cenv.(callenv_data))) 64%Z then
-             failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
+             failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
            else
-             let addr := list_slice 0 32 cenv.(callenv_data) in
-             let value := list_slice 32 32 cenv.(callenv_data) in
-             if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
-               failing_action
-                 (managed_account_with_accumulators income_sofar spending_sofar stack)
+             if word_iszero (bool_to_word (word_eq (word_of_address cenv.(callenv_caller)) owner)) then
+               failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
              else
-               sending_action addr value
-                              (managed_account_with_accumulators income_sofar (word_add spending_sofar value)
+               let addr := list_slice 0 32 cenv.(callenv_data) in
+               let value := list_slice 32 32 cenv.(callenv_data) in
+               if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
+                 failing_action
+                   (managed_account_with_accumulators owner income_sofar spending_sofar stack)
+               else
+                 sending_action addr value
+                                (managed_account_with_accumulators owner income_sofar
+                                                                   (word_add spending_sofar value)
                                               ((income_sofar, spending_sofar) :: stack))
          else
-           failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
+           failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
        end
     )
     (fun returned =>
        match stack with
        | _ :: new_stack =>
            ContractAction (ContractReturn nil)
-                          (managed_account_with_accumulators income_sofar spending_sofar new_stack)
+                          (managed_account_with_accumulators owner income_sofar spending_sofar new_stack)
        | nil =>
-         failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
+         failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
        end
     )
     (
       match stack with
       | (income_old, spending_old) :: new_stack =>
-        failing_action (managed_account_with_accumulators income_old spending_old new_stack)
+        failing_action (managed_account_with_accumulators owner income_old spending_old new_stack)
       | nil =>
-        failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
+        failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
       end
     )
     .
 
 Lemma managed_account_with_accumulators_def :
-  forall income_sofar spending_sofar stack,
-    managed_account_with_accumulators income_sofar spending_sofar stack =
+  forall owner income_sofar spending_sofar stack,
+    managed_account_with_accumulators owner income_sofar spending_sofar stack =
   Respond
     (fun cenv =>
        match word_eq word_zero (word_of_nat (length (callenv_data cenv))) with
-       | true => receive_eth (managed_account_with_accumulators (word_add income_sofar cenv.(callenv_value)) spending_sofar stack)
+       | true => receive_eth
+                   (managed_account_with_accumulators owner
+                                                      (word_add income_sofar cenv.(callenv_value))
+                                                      spending_sofar stack)
        | false =>
          if word_eq word_zero (cenv.(callenv_value)) then
            if word_smaller (word_of_nat (List.length cenv.(callenv_data))) 64%Z then
-             failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
+             failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
            else
-             let addr := list_slice 0 32 cenv.(callenv_data) in
-             let value := list_slice 32 32 cenv.(callenv_data) in
-             if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
-               failing_action
-                 (managed_account_with_accumulators income_sofar spending_sofar stack)
+             if word_iszero (bool_to_word (word_eq (word_of_address cenv.(callenv_caller)) owner)) then
+               failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
              else
-               sending_action addr value
-                              (managed_account_with_accumulators income_sofar (word_add spending_sofar value)
+               let addr := list_slice 0 32 cenv.(callenv_data) in
+               let value := list_slice 32 32 cenv.(callenv_data) in
+               if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
+                 failing_action
+                   (managed_account_with_accumulators owner income_sofar spending_sofar stack)
+               else
+                 sending_action addr value
+                                (managed_account_with_accumulators owner income_sofar
+                                                                   (word_add spending_sofar value)
                                               ((income_sofar, spending_sofar) :: stack))
          else
-           failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
+           failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
        end
     )
     (fun returned =>
        match stack with
        | _ :: new_stack =>
            ContractAction (ContractReturn nil)
-                          (managed_account_with_accumulators income_sofar spending_sofar new_stack)
+                          (managed_account_with_accumulators owner income_sofar spending_sofar new_stack)
        | nil =>
-         failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
+         failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
        end
     )
     (
       match stack with
       | (income_old, spending_old) :: new_stack =>
-        failing_action (managed_account_with_accumulators income_old spending_old new_stack)
+        failing_action (managed_account_with_accumulators owner income_old spending_old new_stack)
       | nil =>
-        failing_action (managed_account_with_accumulators income_sofar spending_sofar stack)
+        failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
       end
     )
     .
 Proof.
-  intros i s stack.
+  intros owner i s stack.
   unfold managed_account_with_accumulators.
   apply response_expander_eq.
 Qed.
@@ -215,11 +235,11 @@ Definition managed_account_with_accumulators_storage (income_sofar spending_sofa
   storage_store 1%Z spending_sofar (storage_store 0%Z income_sofar (ST.empty word))
   .
 
-Definition managed_account_with_accumulators_account_state (income_sofar spending_sofar : word) (going_calls : list variable_env) : account_state :=
+Definition managed_account_with_accumulators_account_state (owner income_sofar spending_sofar : word) (going_calls : list variable_env) : account_state :=
   {|
     account_address := managed_account_with_accumulators_address (* TODO: declare this in a section *);
     account_storage := managed_account_with_accumulators_storage income_sofar spending_sofar ;
-    account_code := managed_account_with_accumulators_code ;
+    account_code := managed_account_with_accumulators_code owner ;
     account_balance := word_sub income_sofar spending_sofar ;
     account_ongoing_calls := going_calls
   |}
@@ -259,16 +279,16 @@ Inductive all_cw_corresponds :
 (** This still relies on some unproven conjectures in ConcreteWord.v **)
 
 Theorem managed_account_with_accumulators_correct :
-  forall (income_sofar spending_sofar : word) ongoing stack,
+  forall (owner income_sofar spending_sofar : word) ongoing stack,
     all_cw_corresponds ongoing stack ->
     account_state_responds_to_world
-      (managed_account_with_accumulators_account_state income_sofar spending_sofar ongoing)
-      (managed_account_with_accumulators income_sofar spending_sofar stack)
+      (managed_account_with_accumulators_account_state owner income_sofar spending_sofar ongoing)
+      (managed_account_with_accumulators owner income_sofar spending_sofar stack)
       managed_account_with_accumulators_invariant.
   (* TODO: strengthen the statement so that coinduction goes through. *)
 Proof.
   cofix.
-  intros income_sofar spending_sofar ongoing stack ongoingH.
+  intros owner income_sofar spending_sofar ongoing stack ongoingH.
   rewrite managed_account_with_accumulators_def.
   apply AccountStep.
   {
@@ -357,7 +377,7 @@ Proof.
           }
           rewrite P.
           set (new_income := ZModulo.to_Z _ (ZModulo.add income_sofar _)).
-          generalize (managed_account_with_accumulators_correct new_income).
+          generalize (managed_account_with_accumulators_correct owner new_income).
           intro IH.
           unfold managed_account_with_accumulators_account_state in IH.
           unfold managed_account_with_accumulators_storage in IH.
@@ -450,6 +470,69 @@ Proof.
           }
           {
             intro data_big_enough.
+            set (owner_ng := word_iszero (bool_to_word (word_eq _ owner))).
+            case_eq owner_ng.
+            {
+              (* The case where the owner is not correct. *)
+              intros owner_ngT ac_eq.
+              inversion ac_eq; subst.
+              clear ac_eq.
+
+              eexists.
+              eexists.
+              eexists.
+              split.
+              {
+                intros s.
+                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+                unfold datasize.
+                cbn.
+                unfold word_iszero.
+                rewrite data_len_non_zero.
+                cbn.
+                set (matched := N_of_word _).
+                compute in matched.
+                unfold matched.
+                clear matched.
+                cbn.
+                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+                unfold word_iszero.
+                rewrite sent_zero.
+                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+                unfold datasize.
+                cbn.
+                set (mo := ZModulo.modulo _ 64 _).
+                compute in mo.
+                unfold mo.
+                clear mo.
+                rewrite data_big_enough.
+                cbn.
+                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+                unfold compose.
+                unfold bool_to_word in owner_ngT.
+                unfold word_of_address in owner_ngT.
+                cbn in owner_ngT.
+                rewrite owner_ngT.
+                cbn.
+                set (cond := word_iszero _).
+                compute in cond.
+                unfold cond.
+                clear cond.
+                cbn.
+                right.
+                reflexivity.
+              }
+              {
+                unfold account_state_update_storage.
+                cbn.
+                rewrite get_update_balance.
+                unfold word_sub.
+                cbn.
+                apply managed_account_with_accumulators_correct.
+                assumption.
+              }
+            }
+            intro owner_ok.
             unfold sending_action.
             (* Here, before introducing the existential variables,
              * all ambuiguities must be resolved. *)
@@ -502,6 +585,15 @@ Proof.
                 rewrite S.
                 simpl.
                 repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+                cbn in owner_ok.
+                unfold compose.
+                rewrite owner_ok.
+                set (cond := word_iszero _ ).
+                compute in cond.
+                unfold cond.
+                clear cond.
+                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+
                 set (cd := cut_data _ _).
                 assert (cdH : cd = list_slice 32 32 (callenv_data callenv)).
                 {
@@ -574,6 +666,15 @@ Proof.
                 rewrite S.
                 simpl.
                 repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+                cbn in owner_ok.
+                unfold compose.
+                rewrite owner_ok.
+                set (cond := word_iszero _ ).
+                compute in cond.
+                unfold cond.
+                clear cond.
+                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+
                 set (balance_smaller := word_smaller _ _).
                 assert (F : balance_smaller = false).
                 {
@@ -671,7 +772,7 @@ Proof.
                   reflexivity.
                 }
                 rewrite B.
-                apply (managed_account_with_accumulators_correct income_sofar new_sp).
+                apply (managed_account_with_accumulators_correct owner income_sofar new_sp).
 
                 unfold new_ongoing.
                 apply acc_cons.
@@ -803,7 +904,7 @@ Proof.
       simpl.
 
       rewrite get_update_balance.
-      apply (managed_account_with_accumulators_correct income_sofar spending_sofar
+      apply (managed_account_with_accumulators_correct owner income_sofar spending_sofar
                                          rest_ongoing tail_stack).
       assumption.
     }

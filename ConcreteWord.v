@@ -244,6 +244,7 @@ Module ConcreteWord <: Word.
   Definition address := A.t.
 
   Definition address_of_word (w : word) : address := w.
+  Definition word_of_address (a : address) : word := ZnZ.to_Z a.
 
   Definition address_eq a b :=
     match ZnZ.compare a b with Eq => true | _ => false end.
