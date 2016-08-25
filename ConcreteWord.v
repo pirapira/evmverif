@@ -310,6 +310,7 @@ Module ConcreteWord <: Word.
 
   Axiom memory_state : Set.
   Axiom empty_memory : memory_state.
+
   Axiom cut_memory : word -> word -> memory_state -> list byte.
   Axiom cut_memory_zero_nil :
     forall start m, cut_memory start word_zero m = nil.

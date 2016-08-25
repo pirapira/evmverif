@@ -558,8 +558,9 @@ Module ExamplesOnConcreteWord.
                   {
                     unfold cd.
                     cbn.
-                    (* TODO: define cut_data *)
-                    admit.
+                    unfold cut_data.
+                    cbn.
+                    reflexivity.
                   }
                   rewrite cdH.
                   clear cdH cd.
@@ -653,8 +654,8 @@ Module ExamplesOnConcreteWord.
                   f_equal.
                   f_equal.
                   {
-                    (* TODO: need to define cut_memory *)
-                    admit.
+                    rewrite cut_memory_zero_nil.
+                    reflexivity.
                   }
                 }
                 {
@@ -911,18 +912,16 @@ Module ExamplesOnConcreteWord.
       { (* somehow use the induction hypothesis *)
         unfold update_account_state.
         cbn.
-
-        generalize (managed_account_with_accumulators_correct hd_income hd_spending
-                                           ongoing_tail tail_stack).
-        unfold managed_account_with_accumulators_account_state.
-        case H2; clear H2.
+        case H2.
+        clear H2.
         intros sfx_eq balance_eq storage_eq.
         rewrite storage_eq.
         rewrite balance_eq.
-        tauto.
+        apply managed_account_with_accumulators_correct.
+        assumption.
       }
     }
-  Admitted.
+  Qed.
 
 End ExamplesOnConcreteWord.
 
