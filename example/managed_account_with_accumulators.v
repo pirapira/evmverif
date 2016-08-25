@@ -1,40 +1,24 @@
+(** Some library imports **)
+
 Require Import NArith.
 Require FMapList.
 Require Import OrderedType.
-
 Require Import Word.
 Require Import ContractSem.
-
 Require Import Cyclic.Abstract.CyclicAxioms.
 Require Import Coq.Lists.List.
-
 Require Import ZArith.
-
 Require BinNums.
 Require Cyclic.ZModulo.ZModulo.
-
-(* A useful lemma to be proven *)
-
-
 Require ConcreteWord.
 
 Module ConcreteSem := (ContractSem.Make ConcreteWord.ConcreteWord).
 Include ConcreteSem.
 
-(** TODO: make this tactic only when immediate *)
-(** TODO: use this tactic *)
-Ltac compute_word_smaller :=
-  set (focus := word_smaller _ _);
-  compute in focus;
-  unfold focus;
-  clear focus.
-
-
-(** Example 4: a contract that keeps track of the accumulated income and spending.
+(** Managed account with accumulators: a contract that keeps track of the accumulated income and spending.
  *
- * storage[0]: owner
- * storage[1]: income so far
- * storage[2]: spending so far
+ * storage[0]: income so far
+ * storage[1]: spending so far
  * income so far - spending so far should coincide with the balance.
  *
  * data length 0 => receive eth; storage[1] should be incremented
@@ -44,8 +28,71 @@ Ltac compute_word_smaller :=
  * data[0-19] is the address of recipient.
  * data[32-63] is the amount of spending.
  *
- * no particular prevention of re-entrancy.
+ * There is no particular prevention of re-entrancy, but the invariant holds
+ * regardless of how deeply the execution is nested.
  *)
+
+(** The Implementation **)
+
+(* TODO: streamline this by allowing labels in JUMPDEST *)
+Definition plus_size_label : word := 13%Z.
+Arguments plus_size_label /.
+
+(* TODO: add owner as an immediate value and check it *)
+Definition managed_account_with_accumulators_code : program :=
+  CALLDATASIZE ::
+    PUSH1 plus_size_label ::
+      JUMPI ::
+  (* size zero *)
+  CALLVALUE ::
+    PUSH1 word_zero (* storage[0] *) ::
+      SLOAD ::
+      ADD ::
+    PUSH1 word_zero ::
+      SSTORE ::
+  STOP ::
+  JUMPDEST (* plus_size_label *) ::
+  CALLVALUE ::
+    PUSH1 word_zero (* invalid destination *) ::
+  (**) JUMPI ::
+  (* call_value zero *)
+  CALLDATASIZE ::
+    PUSH1 (64%Z) ::
+      instr_GT ::
+    PUSH1 (0%Z) ::
+      JUMPI (* data too small *) ::
+  PUSH1 (0%Z) (* out size *) ::
+    PUSH1 (0%Z) (* out offset *) ::
+      PUSH1 (0%Z) (* out size *) ::
+        PUSH1 (0%Z) (* in offset *) ::
+          PUSH1 (0%Z) (* in size *) ::
+            PUSH1 (32%Z) ::
+              CALLDATALOAD (* value loaded *) ::
+              DUP1 ::
+                PUSH1 (1%Z) ::
+                  SLOAD ::
+                  ADD ::
+                PUSH1 (1%Z) ::
+                  SSTORE ::
+              PUSH1 (0%Z) ::
+                CALLDATALOAD (* addr loaded *) ::
+                PUSH2 (30000%Z) ::
+                  CALL ::
+    ISZERO ::
+    PUSH1 word_zero ::
+      JUMPI ::
+  STOP ::
+  nil.
+
+
+(** The invaliant **)
+
+Definition managed_account_with_accumulators_invariant (v : variable_env) (c : constant_env) : Prop :=
+    word_add (v.(venv_balance) c.(cenv_this)) (storage_load 1%Z v.(venv_storage))
+  = word_add v.(venv_value_sent) (storage_load 0%Z v.(venv_storage)).
+
+
+(** The behavioural specification **)
 
 Definition failing_action cont : contract_behavior :=
   ContractAction ContractFail cont.
@@ -162,61 +209,6 @@ Proof.
   apply response_expander_eq.
 Qed.
 
-(* TODO: streamline this by allowing labels in JUMPDEST *)
-Definition plus_size_label : word := 13%Z.
-Arguments plus_size_label /.
-
-(* TODO: add owner as an immediate value and check it *)
-Definition managed_account_with_accumulators_code : program :=
-  CALLDATASIZE ::
-    PUSH1 plus_size_label ::
-      JUMPI ::
-  (* size zero *)
-  CALLVALUE ::
-    PUSH1 word_zero (* storage[0] *) ::
-      SLOAD ::
-      ADD ::
-    PUSH1 word_zero ::
-      SSTORE ::
-  STOP ::
-  JUMPDEST (* plus_size_label *) ::
-  CALLVALUE ::
-    PUSH1 word_zero (* invalid destination *) ::
-  (**) JUMPI ::
-  (* call_value zero *)
-  CALLDATASIZE ::
-    PUSH1 (64%Z) ::
-      instr_GT ::
-    PUSH1 (0%Z) ::
-      JUMPI (* data too small *) ::
-  PUSH1 (0%Z) (* out size *) ::
-    PUSH1 (0%Z) (* out offset *) ::
-      PUSH1 (0%Z) (* out size *) ::
-        PUSH1 (0%Z) (* in offset *) ::
-          PUSH1 (0%Z) (* in size *) ::
-            PUSH1 (32%Z) ::
-              CALLDATALOAD (* value loaded *) ::
-              DUP1 ::
-                PUSH1 (1%Z) ::
-                  SLOAD ::
-                  ADD ::
-                PUSH1 (1%Z) ::
-                  SSTORE ::
-              PUSH1 (0%Z) ::
-                CALLDATALOAD (* addr loaded *) ::
-                PUSH2 (30000%Z) ::
-                  CALL ::
-    ISZERO ::
-    PUSH1 word_zero ::
-      JUMPI ::
-  STOP ::
-  nil.
-
-
-Definition managed_account_with_accumulators_invariant (v : variable_env) (c : constant_env) : Prop :=
-    word_add (v.(venv_balance) c.(cenv_this)) (storage_load 1%Z v.(venv_storage))
-  = word_add v.(venv_value_sent) (storage_load 0%Z v.(venv_storage)).
-
 Axiom managed_account_with_accumulators_address : address.
 
 Definition managed_account_with_accumulators_storage (income_sofar spending_sofar : word) : storage :=
@@ -261,6 +253,10 @@ Inductive all_cw_corresponds :
       all_cw_corresponds (hd_venv :: tail_venvs)
                        ((hd_income, hd_spending) :: tail_stack)
 .
+
+
+(** The theorem: The implementation matches the specification **)
+(** This still relies on some unproven conjectures in ConcreteWord.v **)
 
 Theorem managed_account_with_accumulators_correct :
   forall (income_sofar spending_sofar : word) ongoing stack,
@@ -835,9 +831,6 @@ Proof.
     inversion ongoingH; subst.
     clear ongoingH.
     inversion H0; subst.
-    (* TODO: replace these lines with something new.
-    apply all_cw_calling_state_head_tail in ongoingH.
-    case ongoingH as [ongoing_tailH ongoing_headH]. *)
 
     eexists.
     eexists.
