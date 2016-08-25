@@ -1,4 +1,34 @@
-(** Some library imports **)
+(** Managed account with accumulators: a contract that keeps track
+ *  of the accumulated income and spending.
+ *
+ * The contract [managed_account_with_accumulators_code]
+ * is a wallet-like contract that can be controlled by a single owner.
+ * It also accepts payments from any account.
+ *
+ * The contract keeps track of the accumulated income and spending in the
+ * storage.
+ * storage[0]: income so far, and
+ * storage[1]: spending so far
+ * The difference 'income so far - spending so far' should
+ * coincide with the balance.
+ * This is stated in [managed_account_with_accumulators_invariant]
+ *
+ * When this contract is called with no data, the contract just
+ * receives Eth.  So, storage[0] should be increased.
+ *
+ * When the contract is called with some data,
+ * the contract sends some Ether, but only when the caller is
+ * the owner.  The owner is stored in the program as an immediate value.
+ * In this case,
+ * data[12-31] is interpreted as the address of recipient.
+ * data[32-63] is used as the amount of spending.
+ * In this case storage[1' should be increased.
+ *
+ * There is no particular prevention of re-entrancy, but the invariant holds
+ * regardless of how deeply the execution is nested.
+ *)
+
+(** Some Coq library imports **)
 
 Require Import NArith.
 Require FMapList.
@@ -10,30 +40,16 @@ Require Import Coq.Lists.List.
 Require Import ZArith.
 Require BinNums.
 Require Cyclic.ZModulo.ZModulo.
+
+(* This one still contains unproven conjectures.  Sorry. *)
 Require ConcreteWord.
 
 Module ConcreteSem := (ContractSem.Make ConcreteWord.ConcreteWord).
 Include ConcreteSem.
 
-(** Managed account with accumulators: a contract that keeps track of the accumulated income and spending.
- *
- * storage[0]: income so far
- * storage[1]: spending so far
- * income so far - spending so far should coincide with the balance.
- *
- * data length 0 => receive eth; storage[1] should be incremented
- *
- * data length > 0 => not receiving eth
- * if msg.sender <> owner, abort.
- * data[0-19] is the address of recipient.
- * data[32-63] is the amount of spending.
- *
- * There is no particular prevention of re-entrancy, but the invariant holds
- * regardless of how deeply the execution is nested.
- *)
-
 (** The Implementation **)
 
+(* [plus_size_label] is the location of the JUMPDEST in the contract *)
 (* TODO: streamline this by allowing labels in JUMPDEST *)
 Definition plus_size_label : word := 13%Z.
 Arguments plus_size_label /.
@@ -119,6 +135,15 @@ Definition sending_action (recipient : word) value cont : contract_behavior :=
                     |}) cont.
 
 
+(* here is the specification of the contract as
+   a Coq function. *)
+(* Since a contract is a process that can experience unlimited number of
+   interactions, the contract is specified with CoFixpoint. *)
+(* It's a pity that the specification looks more complicated than the
+   implementation.  At the current state, the main fruit is that the
+   invariant is guaranteed in any case.  For proving that,
+   this specification is useful. *)
+
 (* TODO:
    why can't this be computed from the bytecode easily...
    which is called the static symbolic execution... *)
@@ -126,7 +151,7 @@ CoFixpoint managed_account_with_accumulators (owner : word) (income_sofar : word
            (stack : list (word * word))
   : response_to_world :=
   Respond
-    (fun cenv =>
+    (fun cenv => (* what happens when the contract is called (or re-entered) *)
        match word_eq word_zero (word_of_nat (length (callenv_data cenv))) with
        | true => receive_eth
                    (managed_account_with_accumulators owner
@@ -154,7 +179,7 @@ CoFixpoint managed_account_with_accumulators (owner : word) (income_sofar : word
            failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
        end
     )
-    (fun returned =>
+    (fun returned => (* what happens when a callee returns back to the contract. *)
        match stack with
        | _ :: new_stack =>
            ContractAction (ContractReturn nil)
@@ -163,7 +188,7 @@ CoFixpoint managed_account_with_accumulators (owner : word) (income_sofar : word
          failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
        end
     )
-    (
+    ( (* what happens when a callee fails back to the contract. *)
       match stack with
       | (income_old, spending_old) :: new_stack =>
         failing_action (managed_account_with_accumulators owner income_old spending_old new_stack)
@@ -173,6 +198,8 @@ CoFixpoint managed_account_with_accumulators (owner : word) (income_sofar : word
     )
     .
 
+(* This lemma is just for expanding the above definition.  *)
+(* TODO: how to avoid typing the same thing twice? *)
 Lemma managed_account_with_accumulators_def :
   forall owner income_sofar spending_sofar stack,
     managed_account_with_accumulators owner income_sofar spending_sofar stack =
@@ -231,6 +258,9 @@ Qed.
 
 Axiom managed_account_with_accumulators_address : address.
 
+(** How should the state of the implementation look like? **)
+
+(*** How should the storage look like *)
 Definition managed_account_with_accumulators_storage (income_sofar spending_sofar : word) : storage :=
   storage_store 1%Z spending_sofar (storage_store 0%Z income_sofar (ST.empty word))
   .
@@ -245,6 +275,8 @@ Definition managed_account_with_accumulators_account_state (owner income_sofar s
   |}
   .
 
+(** How the state should look like when the contract has called some
+    account. *)
 Record managed_account_with_accumulators_calling_state (income_for_reset : word) (spending_for_reset : word) (v : variable_env) : Prop :=
   {
     cw_calling_prg_sfx :
@@ -262,7 +294,9 @@ Record managed_account_with_accumulators_calling_state (income_for_reset : word)
        managed_account_with_accumulators_storage income_for_reset spending_for_reset
   }.
 
-(* TODO: define this *)
+
+(** In case of nested re-entrance, all ongoing executions of the contract
+    should look like specified above. **)
 Inductive all_cw_corresponds :
           list variable_env -> list (word * word) -> Prop :=
 | acc_nil : all_cw_corresponds nil nil
@@ -302,7 +336,6 @@ Proof.
       rewrite address_eq_refl.
       unfold managed_account_with_accumulators_storage.
       set (spend := storage_load 1%Z _).
-      (* TODO: a geneeral lemma is needed here *)
       assert (spendH : spend = spending_sofar).
       {
         unfold spend.
@@ -827,7 +860,6 @@ Proof.
             }
             rewrite E0.
             simpl.
-            (* TODO: define a lemma so that just proving something for a large s is enough *)
             repeat (case s as [| s]; [ solve [left; auto] | ]).
             cbn.
             set (v0 := word_iszero _).
@@ -859,8 +891,6 @@ Proof.
     }
   }
   {
-    (* Now this goal does make sense *)
-    (* TODO: maybe try to see the required condition here? *)
     unfold respond_to_return_correctly.
     intros rr venv cont act.
     intro venvH.
@@ -880,8 +910,6 @@ Proof.
     intros sfx_eq bal_eq.
     inversion H1; subst.
 
-
-    (* TODO: define a property that implies this goal *)
     eexists.
     eexists.
     eexists.
