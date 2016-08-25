@@ -9,7 +9,7 @@ Module AbstractExamples (W : Word).
   Module C := (ContractSem.Make W).
   Import C.
 (**** Now we are able to specify contractsin terms of how they behave over
-      many invocations, returns from calls and even re-entrance! ***)
+      many invocations, returns from calls and even reentrancy! ***)
 
 (* Example 0: a contract that always fails *)
 CoFixpoint always_fail :=
@@ -25,7 +25,7 @@ CoFixpoint always_return x :=
                   (fun (_ : return_result) => always_return x)
                   (always_return x)).
 
-(* Example 2: a contract that calls something and then returns, but fails on re-entrance *)
+(* Example 2: a contract that calls something and then returns, but fails on reentrancy *)
 
 Section FailOnReentrance.
 

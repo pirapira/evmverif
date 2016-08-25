@@ -24,7 +24,7 @@
  * data[32-63] is used as the amount of spending.
  * In this case storage[1] should be increased.
  *
- * There is no particular prevention of re-entrance, but the invariant holds
+ * There is no particular prevention of reentrancy, but the invariant holds
  * regardless of how deeply the execution is nested.
  *
  * See ../readme.md for how to machine-check the proofs.
@@ -298,7 +298,7 @@ Record managed_account_with_accumulators_calling_state (income_for_reset : word)
   }.
 
 
-(** In case of nested re-entrance, all ongoing executions of the contract
+(** In case of nested reentrancy, all ongoing executions of the contract
     should look like specified above. **)
 Inductive all_cw_corresponds :
           list variable_env -> list (word * word) -> Prop :=

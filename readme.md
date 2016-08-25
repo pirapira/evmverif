@@ -50,7 +50,7 @@ This idea is coinductively captured in `response_to_world` type.
 
 ## Advantages
 
-The framework is aware of the re-entrance situations.  Re-entrance can be nested arbitrarily deeply, but the proven invariants hold still.
+The framework is aware of the reentrancy situations.  Reentrancy can be nested arbitrarily deeply, but the proven invariants hold still.
 
 ## Limitations
 
