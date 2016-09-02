@@ -1,7 +1,7 @@
 # Formal Verification of EVM Bytecodes
 
 ## Contents
-This repository contains
+This directory contains
 * a framework for specifying an Ethereum contract
 * some example specifications
 * EVM bytecode programs
