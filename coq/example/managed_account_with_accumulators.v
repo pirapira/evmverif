@@ -110,7 +110,7 @@ Definition managed_account_with_accumulators_code (owner : word) : program :=
   nil.
 
 
-(** The invaliant **)
+(** The invariant **)
 
 Definition managed_account_with_accumulators_invariant (v : variable_env) (c : constant_env) : Prop :=
     word_add (v.(venv_balance) c.(cenv_this)) (storage_load 1%Z v.(venv_storage))
