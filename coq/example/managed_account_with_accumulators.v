@@ -113,7 +113,7 @@ Definition managed_account_with_accumulators_code (owner : word) : program :=
 (** The invariant **)
 
 Definition managed_account_with_accumulators_invariant (v : variable_env) (c : constant_env) : Prop :=
-    word_add (v.(venv_balance) c.(cenv_this)) (storage_load 1%Z v.(venv_storage))
+  word_add (v.(venv_balance) c.(cenv_this)) (storage_load 1%Z v.(venv_storage))
   = word_add v.(venv_value_sent) (storage_load 0%Z v.(venv_storage)).
 
 
@@ -170,14 +170,14 @@ CoFixpoint managed_account_with_accumulators (owner : word) (income_sofar : word
              else
                let addr := list_slice 0 32 cenv.(callenv_data) in
                let value := list_slice 32 32 cenv.(callenv_data) in
-               if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
+               if word_smaller (word_add (word_sub income_sofar spending_sofar) cenv.(callenv_value)) value then
                  failing_action
                    (managed_account_with_accumulators owner income_sofar spending_sofar stack)
                else
                  sending_action addr value
                                 (managed_account_with_accumulators owner income_sofar
                                                                    (word_add spending_sofar value)
-                                              ((income_sofar, spending_sofar) :: stack))
+                                                                   ((income_sofar, spending_sofar) :: stack))
          else
            failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
        end
@@ -185,8 +185,8 @@ CoFixpoint managed_account_with_accumulators (owner : word) (income_sofar : word
     (fun returned => (* what happens when a callee returns back to the contract. *)
        match stack with
        | _ :: new_stack =>
-           ContractAction (ContractReturn nil)
-                          (managed_account_with_accumulators owner income_sofar spending_sofar new_stack)
+         ContractAction (ContractReturn nil)
+                        (managed_account_with_accumulators owner income_sofar spending_sofar new_stack)
        | nil =>
          failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
        end
@@ -199,60 +199,60 @@ CoFixpoint managed_account_with_accumulators (owner : word) (income_sofar : word
         failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
       end
     )
-    .
+.
 
 (* This lemma is just for expanding the above definition.  *)
 (* TODO: how to avoid typing the same thing twice? *)
 Lemma managed_account_with_accumulators_def :
   forall owner income_sofar spending_sofar stack,
     managed_account_with_accumulators owner income_sofar spending_sofar stack =
-  Respond
-    (fun cenv =>
-       match word_eq word_zero (word_of_nat (length (callenv_data cenv))) with
-       | true => receive_eth
-                   (managed_account_with_accumulators owner
-                                                      (word_add income_sofar cenv.(callenv_value))
-                                                      spending_sofar stack)
-       | false =>
-         if word_eq word_zero (cenv.(callenv_value)) then
-           if word_smaller (word_of_nat (List.length cenv.(callenv_data))) 64%Z then
-             failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
-           else
-             if word_iszero (bool_to_word (word_eq (word_of_address cenv.(callenv_caller)) owner)) then
+    Respond
+      (fun cenv => (* what happens when the contract is called (or re-entered) *)
+         match word_eq word_zero (word_of_nat (length (callenv_data cenv))) with
+         | true => receive_eth
+                     (managed_account_with_accumulators owner
+                                                        (word_add income_sofar cenv.(callenv_value))
+                                                        spending_sofar stack)
+         | false =>
+           if word_eq word_zero (cenv.(callenv_value)) then
+             if word_smaller (word_of_nat (List.length cenv.(callenv_data))) 64%Z then
                failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
              else
-               let addr := list_slice 0 32 cenv.(callenv_data) in
-               let value := list_slice 32 32 cenv.(callenv_data) in
-               if word_smaller (word_sub (word_add income_sofar cenv.(callenv_value)) spending_sofar) value then
-                 failing_action
-                   (managed_account_with_accumulators owner income_sofar spending_sofar stack)
+               if word_iszero (bool_to_word (word_eq (word_of_address cenv.(callenv_caller)) owner)) then
+                 failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
                else
-                 sending_action addr value
-                                (managed_account_with_accumulators owner income_sofar
-                                                                   (word_add spending_sofar value)
-                                              ((income_sofar, spending_sofar) :: stack))
-         else
-           failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
-       end
-    )
-    (fun returned =>
-       match stack with
-       | _ :: new_stack =>
+                 let addr := list_slice 0 32 cenv.(callenv_data) in
+                 let value := list_slice 32 32 cenv.(callenv_data) in
+                 if word_smaller (word_add (word_sub income_sofar spending_sofar) cenv.(callenv_value)) value then
+                   failing_action
+                     (managed_account_with_accumulators owner income_sofar spending_sofar stack)
+                 else
+                   sending_action addr value
+                                  (managed_account_with_accumulators owner income_sofar
+                                                                     (word_add spending_sofar value)
+                                                                     ((income_sofar, spending_sofar) :: stack))
+           else
+             failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
+         end
+      )
+      (fun returned => (* what happens when a callee returns back to the contract. *)
+         match stack with
+         | _ :: new_stack =>
            ContractAction (ContractReturn nil)
                           (managed_account_with_accumulators owner income_sofar spending_sofar new_stack)
-       | nil =>
-         failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
-       end
-    )
-    (
-      match stack with
-      | (income_old, spending_old) :: new_stack =>
-        failing_action (managed_account_with_accumulators owner income_old spending_old new_stack)
-      | nil =>
-        failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
-      end
-    )
-    .
+         | nil =>
+           failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
+         end
+      )
+      ( (* what happens when a callee fails back to the contract. *)
+        match stack with
+        | (income_old, spending_old) :: new_stack =>
+          failing_action (managed_account_with_accumulators owner income_old spending_old new_stack)
+        | nil =>
+          failing_action (managed_account_with_accumulators owner income_sofar spending_sofar stack)
+        end
+      )
+.
 Proof.
   intros owner i s stack.
   unfold managed_account_with_accumulators.
@@ -266,7 +266,7 @@ Axiom managed_account_with_accumulators_address : address.
 (*** How should the storage look like *)
 Definition managed_account_with_accumulators_storage (income_sofar spending_sofar : word) : storage :=
   storage_store 1%Z spending_sofar (storage_store 0%Z income_sofar (ST.empty word))
-  .
+.
 
 Definition managed_account_with_accumulators_account_state (owner income_sofar spending_sofar : word) (going_calls : list variable_env) : account_state :=
   {|
@@ -276,7 +276,7 @@ Definition managed_account_with_accumulators_account_state (owner income_sofar s
     account_balance := word_sub income_sofar spending_sofar ;
     account_ongoing_calls := going_calls
   |}
-  .
+.
 
 (** How the state should look like when the contract has called some
     account. *)
@@ -285,30 +285,30 @@ Record managed_account_with_accumulators_calling_state (income_for_reset : word)
     cw_calling_prg_sfx :
       (v.(venv_prg_sfx) =
        ISZERO ::
-           PUSH1 word_zero ::
-           JUMPI ::
-           STOP ::
-           nil) ;
+              PUSH1 word_zero ::
+              JUMPI ::
+              STOP ::
+              nil) ;
     cw_calling_balance :
       venv_balance_at_call v managed_account_with_accumulators_address =
       word_sub income_for_reset spending_for_reset ;
     cw_calling_storage :
       v.(venv_storage_at_call) =
-       managed_account_with_accumulators_storage income_for_reset spending_for_reset
+      managed_account_with_accumulators_storage income_for_reset spending_for_reset
   }.
 
 
 (** In case of nested reentrancy, all ongoing executions of the contract
     should look like specified above. **)
 Inductive all_cw_corresponds :
-          list variable_env -> list (word * word) -> Prop :=
+  list variable_env -> list (word * word) -> Prop :=
 | acc_nil : all_cw_corresponds nil nil
 | acc_cons :
     forall hd_venv tail_venvs hd_income hd_spending tail_stack,
       managed_account_with_accumulators_calling_state hd_income hd_spending hd_venv ->
       all_cw_corresponds tail_venvs tail_stack ->
       all_cw_corresponds (hd_venv :: tail_venvs)
-                       ((hd_income, hd_spending) :: tail_stack)
+                         ((hd_income, hd_spending) :: tail_stack)
 .
 
 
@@ -363,6 +363,7 @@ Proof.
         reflexivity.
       }
       rewrite incomeH.
+      (* TODO: the following move has to be a tactic *)
       generalize word_add_sub.
       cbn.
       intro was.
@@ -375,260 +376,130 @@ Proof.
     }
     {
       intro I.
-      set (data_len_zero := word_eq word_zero (word_of_nat _)).
-      case_eq data_len_zero.
+      (* Now trying a different approach,
+       * just follow the program to find
+       * the case analysis *)
+      intro a_sem.
+      intro s.
+      repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+      unfold datasize.
+      cbn.
+
+      (* http://adam.chlipala.net/cpdt/html/Match.html *)
+      Ltac find_if_inside :=
+        match goal with
+        | [ |- context[if ?X then _ else _] ] => case_eq X
+        end.
+
+      find_if_inside.
       { (* data_len_is_zero *)
         intro data_len_is_zero.
-        unfold receive_eth.
-        intro H.
-        inversion H; subst.
-        clear H.
+        unfold word_iszero in data_len_is_zero.
+        rewrite data_len_is_zero in a_sem.
+        repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+        right.
+
+        inversion a_sem; subst.
+        clear a_sem.
         eexists.
         eexists.
         eexists.
-        split.
+        eexists.
+        split; [ solve [eauto] | ].
+        cbn.
+        unfold managed_account_with_accumulators_storage.
+        set (prev_income := storage_load _ _).
+        assert (P : prev_income = income_sofar).
         {
-          intro s.
-          repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-          unfold datasize.
-          cbn.
-          unfold word_iszero.
-          rewrite data_len_is_zero.
-          repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-          right.
+          unfold prev_income.
+          (* why does it contain ST.find *)
+          rewrite storage_store_reorder by (compute; auto).
+          rewrite storage_load_store.
           reflexivity.
         }
+        rewrite P.
+        set (new_income := ZModulo.to_Z _ (ZModulo.add income_sofar _)).
+        generalize (managed_account_with_accumulators_correct owner new_income).
+        intro IH.
+        unfold managed_account_with_accumulators_account_state in IH.
+        unfold managed_account_with_accumulators_storage in IH.
+        assert (II : storage_store 0%Z new_income
+                                   (storage_store 1%Z spending_sofar
+                                                  (storage_store 0%Z income_sofar
+                                                                 (ST.empty word))) =
+                     (storage_store 1%Z spending_sofar
+                                    (storage_store 0%Z new_income
+                                                   (ST.empty word)))).
         {
-          cbn.
-          unfold managed_account_with_accumulators_storage.
-          set (prev_income := storage_load _ _).
-          assert (P : prev_income = income_sofar).
-          {
-            unfold prev_income.
-            (* why does it contain ST.find *)
-            rewrite storage_store_reorder by (compute; auto).
-            rewrite storage_load_store.
-            reflexivity.
-          }
-          rewrite P.
-          set (new_income := ZModulo.to_Z _ (ZModulo.add income_sofar _)).
-          generalize (managed_account_with_accumulators_correct owner new_income).
-          intro IH.
-          unfold managed_account_with_accumulators_account_state in IH.
-          unfold managed_account_with_accumulators_storage in IH.
-          assert (II : storage_store 0%Z new_income
-                       (storage_store 1%Z spending_sofar
-                          (storage_store 0%Z income_sofar
-                             (ST.empty word))) =
-                       (storage_store 1%Z spending_sofar
-                          (storage_store 0%Z new_income
-                             (ST.empty word)))).
-          {
-            rewrite storage_store_reorder by solve [compute; auto].
-            rewrite storage_store_idem.
-            reflexivity.
-          }
-          rewrite II.
-          unfold update_balance.
-          rewrite address_eq_refl.
-          generalize word_add_sub.
-          cbn.
-          intro was.
-          rewrite was.
-          cbn in IH.
-          clear II.
-          clear was.
-
-          eapply IH.
-          assumption.
+          rewrite storage_store_reorder by solve [compute; auto].
+          rewrite storage_store_idem.
+          reflexivity.
         }
+        rewrite II.
+        unfold update_balance.
+        rewrite address_eq_refl.
+        generalize word_add_sub.
+        cbn.
+        intro was.
+        rewrite was.
+        cbn in IH.
+        clear II.
+        clear was.
+
+        eapply IH.
+        assumption.
       }
       { (* input data is not nil *)
         intros data_len_non_zero.
-        case_eq (word_eq word_zero (callenv_value callenv)).
+        unfold word_iszero in data_len_non_zero.
+        rewrite data_len_non_zero in a_sem.
+
+        cbn.
+        set (matched := N_of_word _).
+        compute in matched.
+        unfold matched.
+        clear matched.
+        cbn.
+        repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+        find_if_inside.
         { (* sent value is zero *)
           intro sent_zero.
-          (* hmmm wanting ssreflect tactics. *)
-          match goal with
-            | [ |- ((if ?t then _ else _) = _) -> _] => case_eq t
-          end.
+          unfold word_iszero in sent_zero.
+          rewrite sent_zero in a_sem.
 
+          repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+          unfold datasize.
+          cbn.
+          find_if_inside.
           {
-            intro data_short.
-            unfold failing_action.
-            intro H.
-            inversion H; subst.
-            clear H.
-            eexists.
-            eexists.
-            eexists.
-            split.
+            find_if_inside.
             {
-              intros s.
-              repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-              unfold plus_size_label.
-              unfold datasize.
-              cbn.
-              set (zero_cond := word_iszero _ ).
-              assert (Zf : zero_cond = false) by assumption.
-              rewrite Zf.
-              cbn.
-              simpl.
-              repeat (case s as [| s]; [ solve [left; auto] | ]).
-              cbn.
-              set (z_cond := word_iszero _).
-              assert (Zt : z_cond = true) by assumption.
-              rewrite Zt.
-              repeat (case s as [| s]; [ solve [left; auto] | ]).
-              cbn.
-              unfold datasize.
-              cbn.
-              set (small := word_smaller _ _).
-              assert (SS : small = true).
-              {
-                unfold small.
-                assumption.
-              }
-              rewrite SS.
-              simpl.
-              right.
-              eauto.
+              intros _.
+              intro F.
+              compute in F.
+              congruence.
             }
+            set (mo := ZModulo.modulo _ 64 _).
+            compute in mo.
+            unfold mo.
+            clear mo.
+            intros data_long _.
+            rewrite data_long in a_sem.
+            repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+            find_if_inside.
             {
-              unfold update_account_state.
-              cbn.
-              unfold update_balance.
-              rewrite address_eq_refl.
-              apply managed_account_with_accumulators_correct.
-              assumption.
-            }
-          }
-          {
-            intro data_big_enough.
-            set (owner_ng := word_iszero (bool_to_word (word_eq _ owner))).
-            case_eq owner_ng.
-            {
-              (* The case where the owner is not correct. *)
-              intros owner_ngT ac_eq.
-              inversion ac_eq; subst.
-              clear ac_eq.
-
-              eexists.
-              eexists.
-              eexists.
-              split.
+              find_if_inside.
               {
-                intros s.
-                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-                unfold datasize.
-                cbn.
-                unfold word_iszero.
-                rewrite data_len_non_zero.
-                cbn.
-                set (matched := N_of_word _).
-                compute in matched.
-                unfold matched.
-                clear matched.
-                cbn.
-                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-                unfold word_iszero.
-                rewrite sent_zero.
-                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-                unfold datasize.
-                cbn.
-                set (mo := ZModulo.modulo _ 64 _).
-                compute in mo.
-                unfold mo.
-                clear mo.
-                rewrite data_big_enough.
-                cbn.
-                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-                unfold compose.
-                unfold bool_to_word in owner_ngT.
-                unfold word_of_address in owner_ngT.
-                cbn in owner_ngT.
-                rewrite owner_ngT.
-                cbn.
-                set (cond := word_iszero _).
-                compute in cond.
-                unfold cond.
-                clear cond.
-                cbn.
-                right.
-                reflexivity.
-              }
-              {
-                unfold account_state_update_storage.
-                cbn.
-                rewrite get_update_balance.
-                unfold word_sub.
-                cbn.
-                apply managed_account_with_accumulators_correct.
-                assumption.
-              }
-            }
-            intro owner_ok.
-            unfold sending_action.
-            (* Here, before introducing the existential variables,
-             * all ambuiguities must be resolved. *)
-            set (enough_balance_spec := word_smaller _ _).
-            case_eq enough_balance_spec.
-            { (* not enough balance *)
-              intro not_enough_spec.
-              intro H.
-              inversion H; subst.
-              clear H.
+                (* caller is the owner *)
+                intros right_caller _.
+                cbn in a_sem.
+                rewrite right_caller in a_sem.
+                set (b := word_iszero _) in a_sem.
+                compute in b.
+                unfold b in a_sem.
+                clear b.
 
-              eexists.
-              eexists.
-              eexists.
-              split.
-              {
-                intro s.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
-                unfold datasize.
-                cbn.
-                set (e0 := word_iszero _).
-                assert (R : e0 = false) by assumption.
-                rewrite R.
-                unfold N_of_word.
-                cbn.
-                set (matched := Z.to_N (ZModulo.to_Z _ (ZModulo.modulo _ 13 256))).
-                compute in matched.
-                unfold matched.
-                clear matched.                  simpl.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                simpl.
-                assert (Z : word_iszero (callenv_value callenv) = true)
-                by assumption.
-                rewrite Z.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
-                unfold datasize.
-                simpl.
-                set (s64 := word_smaller _ _).
-                assert (S : s64 = false).
-                {
-                  unfold s64.
-                  set (x := ZModulo.modulo _ _ _ ).
-                  compute in x.
-                  unfold x.
-                  assumption.
-                }
-
-                rewrite S.
-                simpl.
                 repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-                cbn in owner_ok.
-                unfold compose.
-                rewrite owner_ok.
-                set (cond := word_iszero _ ).
-                compute in cond.
-                unfold cond.
-                clear cond.
-                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-
                 set (cd := cut_data _ _).
                 assert (cdH : cd = list_slice 32 32 (callenv_data callenv)).
                 {
@@ -640,254 +511,210 @@ Proof.
                 }
                 rewrite cdH.
                 clear cdH cd.
-                set (balance_smaller := word_smaller _ _).
-                assert (A : balance_smaller = true).
+                unfold update_balance.
+                rewrite address_eq_refl.
+                find_if_inside.
                 {
-                  unfold balance_smaller.
-                  rewrite get_update_balance.
-                  generalize word_add_sub.
+                  (* the balance is too small *)
+                  intro balance_small.
+                  rewrite balance_small in a_sem.
+                  right.
+                  eexists. eexists. eexists. eexists.
+                  split; [ reflexivity | ].
                   cbn.
-                  intro K.
-                  rewrite K.
+                  rewrite address_eq_refl.
+                  inversion a_sem; subst.
+                  apply managed_account_with_accumulators_correct.
                   assumption.
                 }
-                rewrite A.
-                right.
-                eauto.
+                {
+                  intro balance_big.
+                  rewrite balance_big in a_sem.
+                  right.
+                  eexists.
+                  eexists.
+                  eexists.
+                  eexists.
+                  cbn.
+                  split.
+                  {
+                    reflexivity.
+                  }
+                  {
+                    cbn.
+                    inversion a_sem; subst.
+                    clear a_sem.
+                    rewrite address_eq_refl.
+
+                    (*
+                    apply managed_account_with_accumulators_correct.
+                     *)
+                    cbn.
+                    unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
+                    set (new_storage := storage_store _ _ _).
+                    set (new_ongoing := _ :: ongoing).
+
+                    set (new_balance := ZModulo.to_Z _ (ZModulo.sub _ _)).
+
+                    set (new_sp := ZModulo.to_Z _ (ZModulo.add spending_sofar _)).
+                    assert (S : new_storage = managed_account_with_accumulators_storage income_sofar new_sp).
+                    {
+                      unfold new_storage.
+                      clear new_ongoing.
+                      clear new_balance.
+                      unfold managed_account_with_accumulators_storage.
+                      rewrite storage_load_store.
+                      set (e := word_eq _ 1%Z).
+                      compute in e.
+                      unfold e.
+                      clear e.
+                      set (idx := (ZModulo.modulo _ _  _)).
+                      compute in idx.
+                      unfold idx.
+                      clear idx.
+                      fold new_sp.
+                      rewrite storage_store_idem.
+                      reflexivity.
+                    }
+
+                    rewrite S.
+                    assert (B : new_balance = word_sub income_sofar new_sp).
+                    {
+                      clear ongoing ongoingH I new_ongoing.
+                      unfold new_balance.
+                      unfold new_sp.
+                      clear new_balance.
+                      clear S.
+                      clear new_storage.
+                      clear new_sp.
+                      generalize word_add_zero.
+                      intro T.
+                      cbn in T.
+                      rewrite (T _ _ sent_zero).
+                      generalize word_sub_sub.
+                      intro S.
+                      cbn in S.
+                      cbn.
+                      rewrite !S.
+                      rewrite modulo_idem.
+                      reflexivity.
+                    }
+                    rewrite B.
+                    apply (managed_account_with_accumulators_correct owner income_sofar new_sp).
+
+                    unfold new_ongoing.
+                    apply acc_cons.
+                    {
+                      simpl.
+                      refine (
+                          {|
+                            cw_calling_prg_sfx := _ ;
+                            cw_calling_balance := _
+                          |}
+                        ).
+                      {
+                        reflexivity.
+                      }
+                      {
+                        cbn.
+                        rewrite address_eq_refl.
+                        reflexivity.
+                      }
+                      {
+                        cbn.
+                        reflexivity.
+                      }
+                    }
+                    {
+                      assumption.
+                    }
+                  }
+                }
               }
               {
-                simpl.
-                unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
+                intros _ F.
+                compute in F.
+                congruence.
+              }
+            }
+            {
+              find_if_inside.
+              {
+                intros _ F.
+                compute in F.
+                congruence.
+              }
+              {
+                intros wrong_owner _.
+                cbn.
+                right.
+                eexists.
+                eexists.
+                eexists.
+                eexists.
+                split; [reflexivity | ].
+                cbn.
+                cbn in a_sem.
+                rewrite wrong_owner in a_sem.
+
+                inversion a_sem; subst.
                 unfold update_balance.
                 rewrite address_eq_refl.
                 apply managed_account_with_accumulators_correct.
                 assumption.
               }
             }
-            { (* enough balance *)
-              intro enough_balance_spec_t.
-              intro H.
-              inversion H; subst.
-              clear H.
-              eexists.
-              eexists.
-              eexists.
-              split.
-              {
-                intro s.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
-                unfold datasize.
-                cbn.
-                set (e0 := word_iszero _).
-                assert (R : e0 = false) by assumption.
-                rewrite R.
-                unfold N_of_word.
-                cbn.
-                set (matched := Z.to_N (ZModulo.to_Z _ (ZModulo.modulo _ 13 256))).
-                compute in matched.
-                unfold matched.
-                clear matched.                  simpl.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                simpl.
-                assert (Z : word_iszero (callenv_value callenv) = true) by assumption.
-                rewrite Z.
-                repeat (case s as [| s]; [ solve [left; auto] | ]).
-                cbn.
-                unfold datasize.
-                cbn.
-                set (s64 := word_smaller _ _).
-                assert (S : s64 = false) by assumption.
-                rewrite S.
-                simpl.
-                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-                cbn in owner_ok.
-                unfold compose.
-                rewrite owner_ok.
-                set (cond := word_iszero _ ).
-                compute in cond.
-                unfold cond.
-                clear cond.
-                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-
-                set (balance_smaller := word_smaller _ _).
-                assert (F : balance_smaller = false).
-                {
-                  (* use enough_balance_spec *)
-                  unfold cut_data in balance_smaller.
-                  cbn in balance_smaller.
-                  unfold balance_smaller.
-                  rewrite get_update_balance.
-                  set (idx := N_of_word _).
-                  compute in idx.
-                  unfold idx.
-                  clear idx.
-                  clear balance_smaller.
-                  cbn in enough_balance_spec_t.
-                  generalize enough_balance_spec_t.
-                  generalize word_add_sub.
-                  intro WAS.
-                  cbn in WAS.
-                  rewrite WAS.
-                  tauto.
-                }
-                rewrite F.
-                clear F.
-                cbn.
-                right.
-                f_equal.
-                f_equal.
-                f_equal.
-                {
-                  rewrite cut_memory_zero_nil.
-                  reflexivity.
-                }
-              }
-              {
-                cbn.
-                unfold cut_data.
-                cbn.
-                unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
-                set (new_storage := storage_store _ _ _).
-                set (new_ongoing := _ :: ongoing).
-
-
-                unfold update_balance.
-                rewrite address_eq_refl.
-
-                set (new_balance := ZModulo.to_Z _ (ZModulo.sub _ _)).
-
-                set (new_sp := ZModulo.to_Z _ (ZModulo.add spending_sofar _)).
-                assert (S : new_storage = managed_account_with_accumulators_storage income_sofar new_sp).
-                {
-                  unfold new_storage.
-                  clear new_ongoing.
-                  clear new_balance.
-                  clear enough_balance_spec_t.
-                  unfold managed_account_with_accumulators_storage.
-                  rewrite storage_load_store.
-                  set (e := word_eq _ 1%Z).
-                  compute in e.
-                  unfold e.
-                  clear e.
-                  set (idx := (N_of_word _)).
-                  compute in idx.
-                  unfold idx.
-                  clear idx.
-                  fold new_sp.
-                  rewrite storage_store_idem.
-                  reflexivity.
-                }
-
-                rewrite S.
-                assert (B : new_balance = word_sub income_sofar new_sp).
-                {
-                  clear ongoing ongoingH I new_ongoing.
-                  unfold new_balance.
-                  unfold new_sp.
-                  clear new_balance.
-                  clear S.
-                  clear new_storage.
-                  clear new_sp.
-                  clear enough_balance_spec_t.
-                  generalize word_add_zero.
-                  intro T.
-                  cbn in T.
-                  rewrite (T _ _ sent_zero).
-                  generalize word_sub_sub.
-                  intro S.
-                  cbn in S.
-                  cbn.
-                  rewrite !S.
-                  rewrite modulo_idem.
-                  set (c := N_of_word _).
-                  compute in c.
-                  unfold c.
-                  clear c.
-                  reflexivity.
-                }
-                rewrite B.
-                apply (managed_account_with_accumulators_correct owner income_sofar new_sp).
-
-                unfold new_ongoing.
-                apply acc_cons.
-                {
-                  simpl.
-                  refine (
-                      {|
-                        cw_calling_prg_sfx := _ ;
-                        cw_calling_balance := _
-                      |}
-                    ).
-                  {
-                    reflexivity.
-                  }
-                  {
-                    cbn.
-                    rewrite get_update_balance.
-                    reflexivity.
-                  }
-                  {
-                    cbn.
-                    reflexivity.
-                  }
-                }
-                {
-                  assumption.
-                }
-              }
-            }
-          }
-        }
-        { (* sent value is not zero, and data is also sent; should fail *)
-          (* I can just imagine this needs the definition of datasize, too *)
-          idtac.
-          intro value_nonzero.
-          intro H.
-          inversion H; subst.
-          eexists.
-          eexists.
-          eexists.
-          split.
-          {
-            intro s.
-            repeat (case s as [| s]; [ solve [left; auto] | ]).
-            cbn.
-            unfold datasize.
-            cbn.
-            set (e0 := word_iszero _).
-            assert (E0 : e0 = false).
-            {
-              assumption.
-            }
-            rewrite E0.
-            simpl.
-            repeat (case s as [| s]; [ solve [left; auto] | ]).
-            cbn.
-            set (v0 := word_iszero _).
-            assert (V0 : v0 = false).
-            {
-              (* maybe this should be a lemma *)
-              unfold v0.
-              generalize value_nonzero.
-              unfold word_eq.
-              unfold ZModulo.eq0.
-              set (v := callenv_value _).
-              case_eq v; auto.
-            }
-            rewrite V0.
-            cbn.
-            right. (* TODO: maybe name a constructor *)
-            eauto.
           }
           {
+            find_if_inside.
+            {
+              set (mo := ZModulo.modulo _ 64 _).
+              compute in mo.
+              unfold mo.
+              clear mo.
+              intros data_short _.
+              rewrite data_short in a_sem.
+              right.
+              eexists.
+              eexists.
+              eexists.
+              eexists.
+              split; [ reflexivity | ].
+              cbn.
               unfold update_account_state.
               cbn.
               unfold update_balance.
               rewrite address_eq_refl.
+              inversion a_sem; subst.
               apply managed_account_with_accumulators_correct.
               assumption.
+            }
+            {
+              intros _.
+              intro F.
+              compute in F.
+              congruence.
+            }
           }
+        }
+        { (* sent value is nonzero *)
+          intro value_nonzero.
+          unfold word_iszero in value_nonzero.
+          rewrite value_nonzero in a_sem.
+          right.
+          eexists.
+          eexists.
+          eexists.
+          eexists.
+          split; [ reflexivity | ].
+          cbn.
+          inversion a_sem; subst.
+          unfold update_account_state.
+          cbn.
+          unfold update_balance.
+          rewrite address_eq_refl.
+          apply managed_account_with_accumulators_correct.
+          assumption.
         }
       }
     }
@@ -933,7 +760,7 @@ Proof.
 
       rewrite get_update_balance.
       apply (managed_account_with_accumulators_correct owner income_sofar spending_sofar
-                                         rest_ongoing tail_stack).
+                                                       rest_ongoing tail_stack).
       assumption.
     }
   }

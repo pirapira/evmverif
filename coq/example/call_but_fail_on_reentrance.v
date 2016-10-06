@@ -209,6 +209,7 @@ Theorem example2_spec_impl_match :
     account_state_responds_to_world
       st (example2_spec n%Z) (fun _ _ => True).
 Proof.
+  unfold example2_spec.
   cofix.
   intros st n n_state.
   case n_state.
@@ -221,7 +222,6 @@ Proof.
     subst.
     clear n_state.
     subst.
-    unfold example2_spec.
     rewrite call_but_fail_on_reentrace_0_eq.
     apply AccountStep.
     {
@@ -229,88 +229,79 @@ Proof.
       intros ce a con.
       split; [ solve [auto] | ].
       intros _ next.
-      eexists.
-      eexists.
-      eexists.
-      split.
+      intro s.
+      simpl.
+      rewrite nst3.
+      repeat (case s as [| s]; [ solve [left; auto] | ]).
+      assert (stl : forall idx, storage_load idx (account_storage st) = storage_load idx empty_storage).
       {
-        intro s.
+        intro idx.
+        unfold storage_load.
+        apply ST.equal_2 in nst2.
+        unfold ST.Equivb in nst2.
+        unfold ST.Raw.Equivb in nst2.
         simpl.
-        rewrite nst3.
-        repeat (case s as [| s]; [ solve [left; auto] | ]).
-        assert (stl : forall idx, storage_load idx (account_storage st) = storage_load idx empty_storage).
+        case_eq (ST.find (elt:=word) idx (account_storage st)); auto.
+        intros w H.
+        apply ST.find_2 in H.
+        apply False_ind.
+        assert (ST.Raw.PX.In idx (ST.this (account_storage st))) as K.
         {
-          intro idx.
-          unfold storage_load.
-          apply ST.equal_2 in nst2.
-          unfold ST.Equivb in nst2.
-          unfold ST.Raw.Equivb in nst2.
-          simpl.
-          case_eq (ST.find (elt:=word) idx (account_storage st)); auto.
-          intros w H.
-          apply ST.find_2 in H.
-          apply False_ind.
-          assert (ST.Raw.PX.In idx (ST.this (account_storage st))) as K.
-          {
-            unfold ST.Raw.PX.In.
-            exists w.
-            assumption.
-          }
-          case nst2 as [EE _].
-          rewrite EE in K.
-          unfold ST.Raw.PX.In in K.
-          case K.
-          intros content K'.
-          apply (@ST.Raw.empty_1 word idx content).
+          unfold ST.Raw.PX.In.
+          exists w.
           assumption.
         }
-        simpl.
-        rewrite !stl.
-        unfold storage_load.
-        unfold empty_storage.
-        simpl.
-        repeat (case s as [| s]; [ solve [left; auto] | ]).
-        simpl.
-        compute_word_mod.
-
-        set (sm0 := word_smaller _ 0%Z).
-
-        assert (H : sm0 = false).
-        {
-          unfold sm0.
-          unfold word_smaller.
-          simpl.
-          rewrite ZModulo.spec_compare.
-          set (v0 := (ZModulo.to_Z _ _)%Z).
-          assert (0 <= v0)%Z.
-          {
-            apply (ZModulo.spec_to_Z_1).
-            unfold ALEN.p.
-            congruence.
-          }
-          set (comparison := (_ ?= _)%Z).
-          case_eq comparison; try congruence.
-          unfold comparison.
-          rewrite Z.compare_nge_iff.
-          intro H'.
-          apply False_ind.
-          apply H'.
-          apply H.
-        }
-        rewrite H.
-
-        right.
-        f_equal.
-        rewrite <- contract_action_expander_eq in next at 1.
-        inversion next; subst.
-        auto.
+        case nst2 as [EE _].
+        rewrite EE in K.
+        unfold ST.Raw.PX.In in K.
+        case K.
+        intros content K'.
+        apply (@ST.Raw.empty_1 word idx content).
+        assumption.
       }
+      simpl.
+      rewrite !stl.
+      unfold storage_load.
+      unfold empty_storage.
+      simpl.
+      repeat (case s as [| s]; [ solve [left; auto] | ]).
+      simpl.
+      compute_word_mod.
+      set (sm0 := word_smaller _ 0%Z).
+      assert (H : sm0 = false).
       {
+        unfold sm0.
+        unfold word_smaller.
         simpl.
-        rewrite <- contract_action_expander_eq in next at 1.
-        inversion next; subst.
-        simpl.
-        apply example2_spec_impl_match.
+        rewrite ZModulo.spec_compare.
+        set (v0 := (ZModulo.to_Z _ _)%Z).
+        assert (0 <= v0)%Z.
+        {
+          apply (ZModulo.spec_to_Z_1).
+          unfold ALEN.p.
+          congruence.
+        }
+        set (comparison := (_ ?= _)%Z).
+        case_eq comparison; try congruence.
+        unfold comparison.
+        rewrite Z.compare_nge_iff.
+        intro H'.
+        apply False_ind.
+        apply H'.
+        apply H.
+      }
+      rewrite H.
+      right.
+      eexists.
+      eexists.
+      eexists.
+      eexists.
+      split; try reflexivity.
+      simpl.
+      rewrite <- contract_action_expander_eq in next at 1.
+      inversion next; subst.
+      clear next.
+      apply example2_spec_impl_match.
         unfold example2_depth_n_state.
         right.
         split; auto.
@@ -341,12 +332,7 @@ Proof.
           apply update_remove_eq.
           assumption.
         }
-
-      (* this place should be come harder and harder as I specify the
-       * state at depth 1
-       *)
       }
-    }
     {
       unfold respond_to_return_correctly.
       intros ? ? ? ?.
@@ -376,32 +362,30 @@ Proof.
       intros _ H.
       inversion H; subst.
       clear H.
-      eexists.
-      eexists.
-      eexists.
-      unfold build_venv_called.
-      rewrite st_code.
-      split.
-      {
         intro s.
         repeat (case s as [| s]; [ solve [left; auto] | ]).
-
         simpl.
-        compute_word_mod.
-        unfold venv_first_instruction.
+        rewrite st_code.
+        unfold example2_program.
+        cbn.
+        repeat (case s as [| s]; [ solve [left; auto] | ]).
+        cbn.
         rewrite st_load.
         simpl.
         rewrite st_code.
         simpl.
         right.
-        eauto.
-      }
-      {
+        eexists.
+        eexists.
+        eexists.
+        eexists.
+        split; [ solve [eauto] | ].
+        unfold build_venv_called.
+        cbn.
         apply example2_spec_impl_match.
         unfold example2_depth_n_state.
         intuition.
       }
-    }
     { (* return *)
       unfold respond_to_return_correctly.
       intros rr venv cont act.

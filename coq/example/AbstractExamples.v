@@ -148,32 +148,25 @@ Section Example0Continue.
       split; [solve [auto] | ].
       intros _ ?.
       always_fail_tac.
-      eexists.
-      eexists.
-      eexists.
-      split.
-      {
-        intros steps.
-        case steps as [ | steps]; [ try left; auto | ].
-        case steps as [ | steps]; [ try left; auto | ].
-        { simpl.
-          assert (H : word_mod (word_of_N 0) (word_of_N 256) = word_of_N 0) by admit.
-          rewrite H.
-          simpl.
-          auto.
-          simpl.
-          rewrite N_of_word_of_N.
-          { cbn.
-            right.
-            eauto.
-          }
-          compute.
-          auto.
-        }
+      intros steps.
+      case steps as [ | steps]; [ try left; auto | ].
+      case steps as [ | steps]; [ try left; auto | ].
+      simpl.
+      assert (H : word_mod (word_of_N 0) (word_of_N 256) = word_of_N 0) by admit.
+      rewrite H.
+      simpl.
+      auto.
+      simpl.
+      rewrite N_of_word_of_N.
+      { cbn.
+        right.
+        eexists.
+        eexists.
+        eexists.
+        eauto.
       }
-      {
-        apply example0_spec_impl_match.
-      }
+      compute.
+      auto.
     }
     {
       unfold respond_to_return_correctly.
@@ -274,16 +267,8 @@ Section Example1Continue.
       intros.
       split; [solve [auto] | ].
       intros _.
-      eexists.
-      eexists.
-      eexists.
-      split.
-      {
-        intro.
-        assert (Z : word_mod word_zero (word_of_N 256) = word_zero).
-        {
-          admit.
-        }
+      intro H.
+      intro steps.
         case steps as [|steps]; [left; auto | ].
         case steps as [|steps]; [left; auto | ].
         case steps as [|steps]; [left; auto | ].
@@ -294,15 +279,19 @@ Section Example1Continue.
         f_equal.
         f_equal.
         simpl.
+        assert (Z : word_mod word_zero (word_of_N 256) = word_zero).
+        {
+          admit.
+        }
         rewrite Z.
         rewrite cut_memory_zero_nil.
+        eexists.
+        eexists.
+        eexists.
+        eexists.
         auto.
-      }
-      {
-        unfold action_example_1 in H.
-        always_return_tac.
+        split; [eauto | ].
         apply example1_spec_impl_match.
-      }
     }
     {
       intros ? ? ? ?.
