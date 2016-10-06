@@ -736,33 +736,28 @@ Proof.
     case H2; clear H2.
     intros sfx_eq bal_eq.
     inversion H1; subst.
-
+    inversion venvH; subst.
+    clear venvH.
+    rewrite sfx_eq.
+    intro X.
+    intro s.
+    repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+    simpl.
+    right.
     eexists.
     eexists.
     eexists.
-    split.
-    {
-      inversion venvH; subst.
-      clear venvH.
-      rewrite sfx_eq.
+    eexists.
+    split; [reflexivity | ].
 
-      intro s.
-      repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-      simpl.
-      right.
-      eauto.
-    }
-    {
-      unfold update_account_state.
-      unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
-      unfold account_state_update_storage.
-      simpl.
-
-      rewrite get_update_balance.
-      apply (managed_account_with_accumulators_correct owner income_sofar spending_sofar
+    unfold update_account_state.
+    unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
+    unfold account_state_update_storage.
+    simpl.
+    rewrite get_update_balance.
+    apply (managed_account_with_accumulators_correct owner income_sofar spending_sofar
                                                        rest_ongoing tail_stack).
-      assumption.
-    }
+    assumption.
   }
   {
     unfold respond_to_fail_correctly.
@@ -787,40 +782,32 @@ Proof.
     inversion ongoingH; subst.
     clear ongoingH.
     inversion H0; subst.
+    intro s.
+    case H2.
+    clear H2.
+    intros ongoing_head_sfx_eq balance_eq storage_eq.
+    rewrite ongoing_head_sfx_eq.
 
-    eexists.
-    eexists.
-    eexists.
-    split.
+    repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+
+    assert (Q : word_iszero (ZModulo.to_Z ALEN.p ZModulo.one) = false).
     {
-      intro s.
-      case H2.
-      clear H2.
-      intros ongoing_head_sfx_eq balance_eq storage_eq.
-      rewrite ongoing_head_sfx_eq.
-
-      repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-
-      assert (Q : word_iszero (ZModulo.to_Z ALEN.p ZModulo.one) = false).
-      {
-        compute.
-        auto.
-      }
-      rewrite Q.
-      simpl.
-      right.
-      eauto.
+      compute.
+      auto.
     }
-    { (* somehow use the induction hypothesis *)
-      unfold update_account_state.
-      cbn.
-      case H2.
-      clear H2.
-      intros sfx_eq balance_eq storage_eq.
-      rewrite storage_eq.
-      rewrite balance_eq.
-      apply managed_account_with_accumulators_correct.
-      assumption.
-    }
+    rewrite Q.
+    simpl.
+    right.
+    eexists.
+    eexists.
+    eexists.
+    eexists.
+    split; [reflexivity | ].
+    unfold update_account_state.
+    cbn.
+    rewrite storage_eq.
+    rewrite balance_eq.
+    apply managed_account_with_accumulators_correct.
+    assumption.
   }
 Qed.

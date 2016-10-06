@@ -801,13 +801,6 @@ Definition update_account_state (prev : account_state) (act: contract_action)
           |}
         end.
 
-(* [program_result_approximate a b] holds when
-   a is identical to b or a still needs more steps *)
-Definition program_result_approximate (a : program_result) (b : program_result)
-:=
-  a = ProgramStepRunOut \/ a = b
-  (* TODO: this [a = b] has to be weakened up to 2^256 in many places *).
-
 Definition program_goes_to_world_and (r : program_result) P :=
   match r with
   | ProgramStepRunOut => True
@@ -817,19 +810,19 @@ Definition program_goes_to_world_and (r : program_result) P :=
   end.
 
 Definition respond_to_call_correctly c a I account_state_responds_to_world :=
-      (forall (callenv : call_env)
+      forall (callenv : call_env)
           act continuation,
           I (build_venv_called a callenv) (build_cenv a) /\
           (I (build_venv_called a callenv) (build_cenv a) ->
            c callenv = ContractAction act continuation ->
-           (forall steps,
+           forall steps,
                let r := program_sem (build_venv_called a callenv) (build_cenv a) steps in
                r = ProgramStepRunOut \/
                exists act, exists st, exists bal, exists pushed_venv,
                        r = ProgramToWorld act st bal pushed_venv /\
                        account_state_responds_to_world
                          (account_state_update_storage st (update_account_state a act st bal pushed_venv))
-                         continuation I))).
+                         continuation I).
 
 Definition respond_to_return_correctly (r : return_result -> contract_behavior)
            (a : account_state) (I :variable_env -> constant_env -> Prop)
@@ -837,14 +830,14 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
   forall (rr : return_result) venv continuation act,
      Some venv = build_venv_returned a rr ->
      r rr = ContractAction act continuation ->
-     exists pushed_venv, exists st, exists bal,
-     ((forall steps,
-         program_result_approximate (program_sem venv (build_cenv a) steps)
-                                    (ProgramToWorld act st bal pushed_venv))
-     /\
-    account_state_responds_to_world
-      (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
-                                    continuation I).
+     (forall steps,
+          let r := program_sem venv (build_cenv a) steps in
+          r = ProgramStepRunOut \/
+          exists act, exists pushed_venv, exists st, exists bal,
+                  r = ProgramToWorld act st bal pushed_venv /\
+                  account_state_responds_to_world
+                    (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
+                    continuation I).
 
 Definition respond_to_fail_correctly (f : contract_behavior)
            (a : account_state) (I : variable_env -> constant_env -> Prop)
@@ -852,16 +845,14 @@ Definition respond_to_fail_correctly (f : contract_behavior)
   forall venv continuation act,
      Some venv = build_venv_fail a ->
      f = ContractAction act continuation ->
-     exists pushed_venv, exists st, exists bal,
-     (forall steps,
-         program_result_approximate (program_sem venv (build_cenv a) steps)
-                                    (ProgramToWorld act st bal pushed_venv))
-     /\
-    account_state_responds_to_world
-      (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
-                                    continuation I.
-
-
+     forall steps,
+       let r := (program_sem venv (build_cenv a) steps) in
+       r = ProgramStepRunOut \/
+       exists act, exists pushed_venv, exists st, exists bal,
+               r = ProgramToWorld act st bal pushed_venv /\
+               account_state_responds_to_world
+                 (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
+                 continuation I.
 
 CoInductive account_state_responds_to_world :
   account_state -> response_to_world -> (variable_env -> constant_env -> Prop (*invariant*)) -> Prop :=

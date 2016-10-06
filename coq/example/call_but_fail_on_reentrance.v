@@ -401,27 +401,22 @@ Proof.
       inversion H; subst.
       clear H.
       intros act_cont_eq.
+      intro s.
+      rewrite prevH''.
+      repeat (case s as [| s]; [ solve [left; auto] | ]).
+      simpl.
+      right.
+      f_equal.
       eexists.
       eexists.
       eexists.
-      split.
-      {
-        intro s.
-        rewrite prevH''.
-        repeat (case s as [| s]; [ solve [left; auto] | ]).
-        simpl.
-        right.
-        f_equal.
-        inversion act_cont_eq.
-        auto.
-      }
-      {
-        inversion act_cont_eq.
-        apply example2_spec_impl_match.
-        unfold example2_depth_n_state.
-        left.
-        repeat (split; auto); tauto.
-      }
+      eexists.
+      split; [reflexivity | ].
+      inversion act_cont_eq; subst.
+      apply example2_spec_impl_match.
+      unfold example2_depth_n_state.
+      left.
+      repeat (split; auto); tauto.
     }
     {
       unfold respond_to_fail_correctly.
@@ -439,27 +434,24 @@ Proof.
       intros act_cont_H.
       inversion act_cont_H; subst.
       clear act_cont_H.
+      intro s.
+      rewrite ve_sfx.
+      repeat (case s as [| s]; [ solve [left; auto] | ]).
+      simpl.
+      rewrite st_code.
+      simpl.
+      right.
+      f_equal.
       eexists.
       eexists.
       eexists.
-      split.
-      {
-        intro s.
-        rewrite ve_sfx.
-        repeat (case s as [| s]; [ solve [left; auto] | ]).
-        simpl.
-        rewrite st_code.
-        simpl.
-        right.
-        f_equal.
-      }
-      { (* update_account_state with contract_fail  *)
-        simpl.
-        apply example2_spec_impl_match.
-        unfold example2_depth_n_state.
-        left.
-        repeat split; auto; tauto.
-      }
+      eexists.
+      split; [reflexivity | ].
+      simpl.
+      apply example2_spec_impl_match.
+      unfold example2_depth_n_state.
+      left.
+      repeat split; auto; tauto.
     }
   }
 Qed.
