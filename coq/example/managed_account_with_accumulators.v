@@ -354,6 +354,16 @@ Ltac e :=
         apply word_addC
 end.
 
+Ltac finisher := solve [repeat e].
+
+
+Ltac execute :=
+      repeat
+      match goal with
+      | [ |- context [ program_sem _ _ ?s ] ] =>
+        (case s as [| s]; [ solve [left; auto] | cbn ])
+      end.
+
 
 (** The theorem: The implementation matches the specification **)
 (** This still relies on some unproven conjectures in ConcreteWord.v **)
@@ -422,7 +432,8 @@ Proof.
        * the case analysis *)
       intro a_sem.
       intro s.
-      repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+      execute.
+
       unfold datasize.
       cbn.
 
@@ -437,7 +448,7 @@ Proof.
         intro data_len_is_zero.
         unfold word_iszero in data_len_is_zero.
         rewrite data_len_is_zero in a_sem.
-        repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+        execute.
 
         inversion a_sem; subst.
         clear a_sem.
@@ -492,14 +503,14 @@ Proof.
         unfold matched.
         clear matched.
         cbn.
-        repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+        execute.
         find_if_inside.
         { (* sent value is zero *)
           intro sent_zero.
           unfold word_iszero in sent_zero.
           rewrite sent_zero in a_sem.
 
-          repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+          execute.
           unfold datasize.
           cbn.
           find_if_inside.
@@ -517,7 +528,7 @@ Proof.
             clear mo.
             intros data_long _.
             rewrite data_long in a_sem.
-            repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+            execute.
             find_if_inside.
             {
               find_if_inside.
@@ -531,7 +542,7 @@ Proof.
                 unfold b in a_sem.
                 clear b.
 
-                repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+                execute.
                 set (cd := cut_data _ _).
                 assert (cdH : cd = list_slice 32 32 (callenv_data callenv)).
                 {
@@ -749,7 +760,7 @@ Proof.
     rewrite sfx_eq.
     intro X.
     intro s.
-    repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+    execute.
     simpl.
     middle.
 
@@ -791,7 +802,7 @@ Proof.
     intros ongoing_head_sfx_eq balance_eq storage_eq.
     rewrite ongoing_head_sfx_eq.
 
-    repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
+    execute.
 
     assert (Q : word_iszero (ZModulo.to_Z ALEN.p ZModulo.one) = false).
     {
@@ -807,6 +818,6 @@ Proof.
     rewrite storage_eq.
     rewrite balance_eq.
     apply managed_account_with_accumulators_correct.
-    assumption.
+    finisher.
   }
 Qed.
