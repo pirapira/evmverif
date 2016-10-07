@@ -312,6 +312,13 @@ Inductive all_cw_corresponds :
 .
 
 
+Ltac middle :=
+  match goal with
+    | [ |- ProgramToWorld _ _ _ _ = ProgramStepRunOut \/
+           exists _, exists _, exists _, exists _, _ ] =>
+      right; eexists; eexists; eexists; eexists; split; [ reflexivity | ]
+  end.
+
 Ltac e :=
   assumption ||
   reflexivity ||
@@ -431,15 +438,10 @@ Proof.
         unfold word_iszero in data_len_is_zero.
         rewrite data_len_is_zero in a_sem.
         repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
-        right.
 
         inversion a_sem; subst.
         clear a_sem.
-        eexists.
-        eexists.
-        eexists.
-        eexists.
-        split; [ solve [eauto] | ].
+        middle.
         cbn.
         unfold managed_account_with_accumulators_storage.
         set (prev_income := storage_load _ _).
@@ -472,13 +474,9 @@ Proof.
         rewrite II.
         unfold update_balance.
         rewrite address_eq_refl.
-        generalize word_add_sub.
-        cbn.
-        intro was.
-        rewrite was.
         cbn in IH.
         clear II.
-        clear was.
+        e.
 
         eapply IH.
         assumption.
@@ -552,9 +550,7 @@ Proof.
                   (* the balance is too small *)
                   intro balance_small.
                   rewrite balance_small in a_sem.
-                  right.
-                  eexists. eexists. eexists. eexists.
-                  split; [ reflexivity | ].
+                  middle.
                   cbn.
                   rewrite address_eq_refl.
                   inversion a_sem; subst.
@@ -564,16 +560,7 @@ Proof.
                 {
                   intro balance_big.
                   rewrite balance_big in a_sem.
-                  right.
-                  eexists.
-                  eexists.
-                  eexists.
-                  eexists.
-                  cbn.
-                  split.
-                  {
-                    reflexivity.
-                  }
+                  middle.
                   {
                     cbn.
                     inversion a_sem; subst.
@@ -681,12 +668,7 @@ Proof.
               {
                 intros wrong_owner _.
                 cbn.
-                right.
-                eexists.
-                eexists.
-                eexists.
-                eexists.
-                split; [reflexivity | ].
+                middle.
                 cbn.
                 cbn in a_sem.
                 rewrite wrong_owner in a_sem.
@@ -708,12 +690,8 @@ Proof.
               clear mo.
               intros data_short _.
               rewrite data_short in a_sem.
-              right.
-              eexists.
-              eexists.
-              eexists.
-              eexists.
-              split; [ reflexivity | ].
+              cbn.
+              middle.
               cbn.
               unfold update_account_state.
               cbn.
@@ -735,12 +713,8 @@ Proof.
           intro value_nonzero.
           unfold word_iszero in value_nonzero.
           rewrite value_nonzero in a_sem.
-          right.
-          eexists.
-          eexists.
-          eexists.
-          eexists.
-          split; [ reflexivity | ].
+          cbn.
+          middle.
           cbn.
           inversion a_sem; subst.
           unfold update_account_state.
@@ -777,12 +751,7 @@ Proof.
     intro s.
     repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
     simpl.
-    right.
-    eexists.
-    eexists.
-    eexists.
-    eexists.
-    split; [reflexivity | ].
+    middle.
 
     unfold update_account_state.
     unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
@@ -831,12 +800,8 @@ Proof.
     }
     rewrite Q.
     simpl.
-    right.
-    eexists.
-    eexists.
-    eexists.
-    eexists.
-    split; [reflexivity | ].
+    middle.
+
     unfold update_account_state.
     cbn.
     rewrite storage_eq.
