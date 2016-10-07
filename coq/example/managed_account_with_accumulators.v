@@ -314,6 +314,7 @@ Inductive all_cw_corresponds :
 
 Ltac is_constant exp :=
   match exp with
+  | 0%Z => idtac
   | ZModulo.one => idtac
   | ALEN.p => idtac
   | (?f ?x ?y) =>
@@ -322,9 +323,7 @@ Ltac is_constant exp :=
     is_constant x
   end.
 
-Ltac reduce_constant :=
-  match goal with
-  | [ |- ?exp = true -> _] =>
+Ltac reduce_constant_inner exp :=
     is_constant exp;
     let e := fresh "e" in
     set (e := exp);
@@ -332,7 +331,14 @@ Ltac reduce_constant :=
     unfold e;
     clear e;
     try congruence;
-    intros _
+    intros _.
+
+Ltac reduce_constant :=
+  match goal with
+  | [ |- ?exp = true -> _] =>
+    reduce_constant_inner exp
+  | [ |- ?exp = false -> _] =>
+    reduce_constant_inner exp
   end.
 
 Ltac middle :=
@@ -377,7 +383,7 @@ Ltac e :=
         apply word_addC
 end.
 
-Ltac finisher := solve [repeat e].
+Ltac finisher := cbn; solve [repeat e].
 
 
 Ltac execute :=
@@ -463,6 +469,7 @@ Proof.
       Ltac if_judge :=
         match goal with
         | [ |- context [ if ?condition then _ else _ ] ] =>
+          is_constant condition;
           let exp := fresh "e" in
           set (exp := condition);
           compute in exp;
@@ -661,53 +668,33 @@ Proof.
                       cbn in S.
                       cbn.
                       rewrite !S.
-                      e.
-                      e.
+                      finisher.
                     }
                     rewrite B.
                     apply (managed_account_with_accumulators_correct owner income_sofar new_sp).
 
                     unfold new_ongoing.
-                    apply acc_cons.
-                    {
-                      simpl.
-                      refine (
-                          {|
-                            cw_calling_prg_sfx := _ ;
-                            cw_calling_balance := _
-                          |}
-                        ).
-                      {
-                        reflexivity.
-                      }
-                      {
-                        cbn.
-                        e.
-                        e.
-                      }
-                      {
-                        cbn.
-                        e.
-                      }
-                    }
-                    {
-                      e.
-                    }
+                    apply acc_cons; try finisher.
+                    simpl.
+                    refine (
+                        {|
+                          cw_calling_prg_sfx := _ ;
+                          cw_calling_balance := _
+                        |}
+                      ); finisher.
                   }
                 }
               }
               {
-                intros _ F.
-                compute in F.
-                congruence.
+                intros _.
+                reduce_constant.
               }
             }
             {
               find_if_inside.
               {
-                intros _ F.
-                compute in F.
-                congruence.
+                intros _.
+                reduce_constant.
               }
               {
                 intros wrong_owner _.
@@ -747,9 +734,7 @@ Proof.
             }
             {
               intros _.
-              intro F.
-              compute in F.
-              congruence.
+              reduce_constant.
             }
           }
         }
