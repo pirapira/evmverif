@@ -359,10 +359,12 @@ Ltac finisher := solve [repeat e].
 
 Ltac execute :=
       repeat
+        (
+          middle || unfold datasize || 
       match goal with
       | [ |- context [ program_sem _ _ ?s ] ] =>
         (case s as [| s]; [ solve [left; auto] | cbn ])
-      end.
+      end).
 
 
 (** The theorem: The implementation matches the specification **)
@@ -419,11 +421,7 @@ Proof.
         reflexivity.
       }
       rewrite incomeH.
-      (* TODO: the following move has to be a tactic *)
-      e.
-      e.
-      e.
-      e.
+      finisher.
     }
     {
       intro I.
@@ -452,7 +450,7 @@ Proof.
 
         inversion a_sem; subst.
         clear a_sem.
-        middle.
+        execute.
         cbn.
         unfold managed_account_with_accumulators_storage.
         set (prev_income := storage_load _ _).
@@ -511,7 +509,6 @@ Proof.
           rewrite sent_zero in a_sem.
 
           execute.
-          unfold datasize.
           cbn.
           find_if_inside.
           {
@@ -561,7 +558,7 @@ Proof.
                   (* the balance is too small *)
                   intro balance_small.
                   rewrite balance_small in a_sem.
-                  middle.
+                  execute.
                   cbn.
                   rewrite address_eq_refl.
                   inversion a_sem; subst.
@@ -571,7 +568,7 @@ Proof.
                 {
                   intro balance_big.
                   rewrite balance_big in a_sem.
-                  middle.
+                  execute.
                   {
                     cbn.
                     inversion a_sem; subst.
@@ -679,7 +676,7 @@ Proof.
               {
                 intros wrong_owner _.
                 cbn.
-                middle.
+                execute.
                 cbn.
                 cbn in a_sem.
                 rewrite wrong_owner in a_sem.
@@ -702,7 +699,7 @@ Proof.
               intros data_short _.
               rewrite data_short in a_sem.
               cbn.
-              middle.
+              execute.
               cbn.
               unfold update_account_state.
               cbn.
@@ -725,7 +722,7 @@ Proof.
           unfold word_iszero in value_nonzero.
           rewrite value_nonzero in a_sem.
           cbn.
-          middle.
+          execute.
           cbn.
           inversion a_sem; subst.
           unfold update_account_state.
@@ -811,7 +808,7 @@ Proof.
     }
     rewrite Q.
     simpl.
-    middle.
+    execute.
 
     unfold update_account_state.
     cbn.
