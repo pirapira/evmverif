@@ -633,15 +633,12 @@ Proof.
                     }
 
                     rewrite S.
+                    clear S.
                     assert (B : new_balance = word_sub income_sofar new_sp).
                     {
                       clear ongoing ongoingH I new_ongoing.
                       unfold new_balance.
                       unfold new_sp.
-                      clear new_balance.
-                      clear S.
-                      clear new_storage.
-                      clear new_sp.
                       generalize word_add_zero.
                       intro T.
                       cbn in T.
