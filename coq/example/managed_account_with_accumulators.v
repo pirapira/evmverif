@@ -387,14 +387,16 @@ Ltac finisher := cbn; solve [repeat e].
 
 
 Ltac execute :=
-  progress
+  cbn; (progress
       repeat
         (
-          middle || unfold datasize || 
+          middle || unfold datasize || unfold instruction_failure_result ||
+          unfold update_account_state || unfold account_state_update_storage ||
+          unfold update_balance ||
       match goal with
       | [ |- context [ program_sem _ _ ?s ] ] =>
         (case s as [| s]; [ solve [left; auto] | cbn ])
-      end).
+      end)); cbn.
 
 
 (** The theorem: The implementation matches the specification **)
@@ -515,7 +517,6 @@ Proof.
           reflexivity.
         }
         rewrite II.
-        unfold update_balance.
         rewrite address_eq_refl.
         cbn in IH.
         clear II.
@@ -534,7 +535,6 @@ Proof.
         compute in matched.
         unfold matched.
         clear matched.
-        cbn.
         execute.
         find_if_inside.
         { (* sent value is zero *)
@@ -582,7 +582,6 @@ Proof.
                 }
                 rewrite cdH.
                 clear cdH cd.
-                unfold update_balance.
                 e.
                 find_if_inside.
                 {
@@ -682,14 +681,11 @@ Proof.
               }
               {
                 intros wrong_owner _.
-                cbn.
                 execute.
-                cbn.
                 cbn in a_sem.
                 rewrite wrong_owner in a_sem.
 
                 inversion a_sem; subst.
-                unfold update_balance.
                 e.
                 apply managed_account_with_accumulators_correct.
                 assumption.
@@ -705,12 +701,8 @@ Proof.
               clear mo.
               intros data_short _.
               rewrite data_short in a_sem.
-              cbn.
               execute.
               cbn.
-              unfold update_account_state.
-              cbn.
-              unfold update_balance.
               rewrite address_eq_refl.
               inversion a_sem; subst.
               apply managed_account_with_accumulators_correct.
@@ -726,13 +718,9 @@ Proof.
           intro value_nonzero.
           unfold word_iszero in value_nonzero.
           rewrite value_nonzero in a_sem.
-          cbn.
           execute.
-          cbn.
           inversion a_sem; subst.
-          unfold update_account_state.
           cbn.
-          unfold update_balance.
           rewrite address_eq_refl.
           apply managed_account_with_accumulators_correct.
           assumption.
@@ -766,11 +754,9 @@ Proof.
     simpl.
     middle.
 
-    unfold update_account_state.
     unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
-    unfold account_state_update_storage.
     simpl.
-    rewrite get_update_balance.
+    e.
     apply (managed_account_with_accumulators_correct owner income_sofar spending_sofar
                                                        rest_ongoing tail_stack).
     assumption.
@@ -803,15 +789,9 @@ Proof.
     clear H2.
     intros ongoing_head_sfx_eq balance_eq storage_eq.
     rewrite ongoing_head_sfx_eq.
-
     execute.
-
     if_judge.
-
-    unfold instruction_failure_result.
     execute.
-
-    unfold update_account_state.
     cbn.
     rewrite storage_eq.
     rewrite balance_eq.
