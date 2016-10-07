@@ -312,6 +312,42 @@ Inductive all_cw_corresponds :
 .
 
 
+Ltac e :=
+  assumption ||
+  reflexivity ||
+  rewrite modulo_idem || match goal with
+           | [ |- context[ address_eq ?x ?x ] ] =>
+             rewrite address_eq_refl
+        | [ |- context[ (storage_load _ (storage_store _ _ _)) ] ] =>
+          rewrite storage_load_store
+
+        | [ |- context[ (storage_load _ (storage_store _ _ _)) ] ] =>
+          rewrite storage_load_store
+        | [ |- context [
+                   (ZModulo.to_Z ALEN.p
+                                 (ZModulo.add
+                                    (ZModulo.to_Z ALEN.p
+                                                  (ZModulo.sub _ _))
+                                    _ )) ] ] =>
+          generalize word_add_sub;
+          intro was;
+          cbn in was;
+          rewrite! was;
+          clear was (* TODO: create a lemma *)
+        | [ |- context [
+                   ZModulo.to_Z ALEN.p
+                                (ZModulo.sub
+                                   (ZModulo.to_Z ALEN.p
+                                                 (ZModulo.add
+                                                    _
+                                                    ?x)) ?x) ] ]
+          => generalize word_addK; intro wK; cbn in wK; rewrite wK; clear wK
+               (* TODO: create a lemma *)
+      | [ |- ZModulo.to_Z ALEN.p (ZModulo.add ?y ?x) = ZModulo.to_Z ALEN.p (ZModulo.add ?x ?y) ] =>
+        apply word_addC
+end.
+
+
 (** The theorem: The implementation matches the specification **)
 (** This still relies on some unproven conjectures in ConcreteWord.v **)
 
@@ -335,7 +371,7 @@ Proof.
       unfold managed_account_with_accumulators_invariant.
       cbn.
       unfold update_balance.
-      rewrite address_eq_refl.
+
       unfold managed_account_with_accumulators_storage.
       set (spend := storage_load 1%Z _).
       assert (spendH : spend = spending_sofar).
@@ -349,14 +385,17 @@ Proof.
       rewrite spendH.
       set (income := storage_load 0%Z _).
       assert (incomeH : income = income_sofar).
+
       {
         unfold income.
-        rewrite storage_load_store.
+        e.
+
         set (e := word_eq _ _).
         compute in e.
         unfold e.
         clear e.
-        rewrite storage_load_store.
+        e.
+
         set (e := word_eq _ _).
         compute in e.
         unfold e.
@@ -364,15 +403,10 @@ Proof.
       }
       rewrite incomeH.
       (* TODO: the following move has to be a tactic *)
-      generalize word_add_sub.
-      cbn.
-      intro was.
-      rewrite !was.
-      generalize word_addK.
-      intro wK.
-      cbn in wK.
-      rewrite wK.
-      apply word_addC.
+      e.
+      e.
+      e.
+      e.
     }
     {
       intro I.
@@ -596,8 +630,8 @@ Proof.
                       cbn in S.
                       cbn.
                       rewrite !S.
-                      rewrite modulo_idem.
-                      reflexivity.
+                      e.
+                      e.
                     }
                     rewrite B.
                     apply (managed_account_with_accumulators_correct owner income_sofar new_sp).
@@ -617,16 +651,16 @@ Proof.
                       }
                       {
                         cbn.
-                        rewrite address_eq_refl.
-                        reflexivity.
+                        e.
+                        e.
                       }
                       {
                         cbn.
-                        reflexivity.
+                        e.
                       }
                     }
                     {
-                      assumption.
+                      e.
                     }
                   }
                 }
