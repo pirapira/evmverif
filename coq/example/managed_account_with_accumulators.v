@@ -437,18 +437,7 @@ Proof.
 
       {
         unfold income.
-        e.
-
-        set (e := word_eq _ _).
-        compute in e.
-        unfold e.
-        clear e.
-        e.
-
-        set (e := word_eq _ _).
-        compute in e.
-        unfold e.
-        reflexivity.
+        finisher.
       }
       rewrite incomeH.
       finisher.
@@ -589,24 +578,22 @@ Proof.
                   unfold cd.
                   cbn.
                   unfold cut_data.
-                  cbn.
-                  reflexivity.
+                  finisher.
                 }
                 rewrite cdH.
                 clear cdH cd.
                 unfold update_balance.
-                rewrite address_eq_refl.
+                e.
                 find_if_inside.
                 {
                   (* the balance is too small *)
                   intro balance_small.
                   rewrite balance_small in a_sem.
                   execute.
-                  cbn.
-                  rewrite address_eq_refl.
+                  e.
                   inversion a_sem; subst.
                   apply managed_account_with_accumulators_correct.
-                  assumption.
+                  finisher.
                 }
                 {
                   intro balance_big.
@@ -618,9 +605,6 @@ Proof.
                     clear a_sem.
                     rewrite address_eq_refl.
 
-                    (*
-                    apply managed_account_with_accumulators_correct.
-                     *)
                     cbn.
                     unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
                     set (new_storage := storage_store _ _ _).
@@ -706,7 +690,7 @@ Proof.
 
                 inversion a_sem; subst.
                 unfold update_balance.
-                rewrite address_eq_refl.
+                e.
                 apply managed_account_with_accumulators_correct.
                 assumption.
               }
