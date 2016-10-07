@@ -312,6 +312,29 @@ Inductive all_cw_corresponds :
 .
 
 
+Ltac is_constant exp :=
+  match exp with
+  | ZModulo.one => idtac
+  | ALEN.p => idtac
+  | (?f ?x ?y) =>
+    is_constant x ; is_constant y
+  | (?f ?x) =>
+    is_constant x
+  end.
+
+Ltac reduce_constant :=
+  match goal with
+  | [ |- ?exp = true -> _] =>
+    is_constant exp;
+    let e := fresh "e" in
+    set (e := exp);
+    compute in e;
+    unfold e;
+    clear e;
+    try congruence;
+    intros _
+  end.
+
 Ltac middle :=
   match goal with
     | [ |- ProgramToWorld _ _ _ _ = ProgramStepRunOut \/
@@ -358,6 +381,7 @@ Ltac finisher := solve [repeat e].
 
 
 Ltac execute :=
+  progress
       repeat
         (
           middle || unfold datasize || 
@@ -435,6 +459,21 @@ Proof.
       unfold datasize.
       cbn.
 
+
+      Ltac if_judge :=
+        match goal with
+        | [ |- context [ if ?condition then _ else _ ] ] =>
+          let exp := fresh "e" in
+          set (exp := condition);
+          compute in exp;
+          match goal with
+          | [ exp := true |- _  ] =>
+            unfold exp; clear exp
+          | [ exp := false |- _  ] =>
+            unfold exp; clear exp
+          end
+        end.
+
       (* http://adam.chlipala.net/cpdt/html/Match.html *)
       Ltac find_if_inside :=
         match goal with
@@ -450,7 +489,6 @@ Proof.
 
         inversion a_sem; subst.
         clear a_sem.
-        execute.
         cbn.
         unfold managed_account_with_accumulators_storage.
         set (prev_income := storage_load _ _).
@@ -515,9 +553,7 @@ Proof.
             find_if_inside.
             {
               intros _.
-              intro F.
-              compute in F.
-              congruence.
+              reduce_constant.
             }
             set (mo := ZModulo.modulo _ 64 _).
             compute in mo.
@@ -801,13 +837,9 @@ Proof.
 
     execute.
 
-    assert (Q : word_iszero (ZModulo.to_Z ALEN.p ZModulo.one) = false).
-    {
-      compute.
-      auto.
-    }
-    rewrite Q.
-    simpl.
+    if_judge.
+
+    unfold instruction_failure_result.
     execute.
 
     unfold update_account_state.
