@@ -409,12 +409,12 @@ Arguments venv_change_sfx pos v c /.
 Definition function_update (addr : word) (val : word) (f : word -> word) : (word -> word) :=
   fun x => (if word_eq x addr then val else f x).
 
-Definition venv_update_storage (addr : word) (val : word) (v : variable_env)
+Definition venv_update_storage (idx : word) (val : word) (v : variable_env)
            : variable_env :=
   {|
     venv_stack := v.(venv_stack) ;
     venv_memory := v.(venv_memory);
-    venv_storage := storage_store addr val v.(venv_storage);
+    venv_storage := storage_store idx val v.(venv_storage);
     venv_prg_sfx := v.(venv_prg_sfx);
     venv_balance := v.(venv_balance);
     venv_caller := v.(venv_caller);
@@ -721,7 +721,7 @@ Definition build_venv_called (a : account_state) (env : call_env) :
         update_balance a.(account_address)
                            (fun _ => a.(account_balance))
                            env.(callenv_balance) ;
-   |}.
+    |}.
 
 Arguments build_venv_called a env /.
 

@@ -637,6 +637,12 @@ Proof.
                     assert (B : new_balance = word_sub income_sofar new_sp).
                     {
                       clear ongoing ongoingH I new_ongoing.
+                      clear balance_big.
+                      clear managed_account_with_accumulators_correct.
+                      clear right_caller.
+                      clear owner.
+                      clear new_storage.
+
                       unfold new_balance.
                       unfold new_sp.
                       generalize word_add_zero.
