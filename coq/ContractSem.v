@@ -781,7 +781,6 @@ Arguments account_state_pop_ongoing_call orig /.
 Definition update_account_state (prev : account_state) (act: contract_action)
            (st : storage) (bal : address -> word)
            (v_opt : option variable_env) : account_state :=
-  account_state_update_storage st
         match v_opt with
         | None =>
           {|
