@@ -817,11 +817,14 @@ Definition respond_to_call_correctly c a I account_state_responds_to_world :=
            forall steps,
                let r := program_sem (build_venv_called a callenv) (build_cenv a) steps in
                r = ProgramStepRunOut \/
-               exists act, exists st, exists bal, exists pushed_venv,
+               exists st, exists bal, exists pushed_venv,
                        r = ProgramToWorld act st bal pushed_venv /\
                        account_state_responds_to_world
                          (account_state_update_storage st (update_account_state a act st bal pushed_venv))
                          continuation I).
+
+
+Check respond_to_call_correctly.
 
 Definition respond_to_return_correctly (r : return_result -> contract_behavior)
            (a : account_state) (I :variable_env -> constant_env -> Prop)
@@ -832,7 +835,7 @@ Definition respond_to_return_correctly (r : return_result -> contract_behavior)
      (forall steps,
           let r := program_sem venv (build_cenv a) steps in
           r = ProgramStepRunOut \/
-          exists act, exists pushed_venv, exists st, exists bal,
+          exists pushed_venv, exists st, exists bal,
                   r = ProgramToWorld act st bal pushed_venv /\
                   account_state_responds_to_world
                     (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)
@@ -847,7 +850,7 @@ Definition respond_to_fail_correctly (f : contract_behavior)
      forall steps,
        let r := (program_sem venv (build_cenv a) steps) in
        r = ProgramStepRunOut \/
-       exists act, exists pushed_venv, exists st, exists bal,
+       exists pushed_venv, exists st, exists bal,
                r = ProgramToWorld act st bal pushed_venv /\
                account_state_responds_to_world
                  (update_account_state (account_state_pop_ongoing_call a) act st bal pushed_venv)

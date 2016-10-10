@@ -292,15 +292,15 @@ Proof.
       }
       rewrite H.
       right.
-      eexists.
+      inversion next; subst.
+      clear next.
       eexists.
       eexists.
       eexists.
       split; try reflexivity.
       simpl.
-      rewrite <- contract_action_expander_eq in next at 1.
-      inversion next; subst.
-      clear next.
+(*      rewrite <- contract_action_expander_eq in next at 1. *)
+
       apply example2_spec_impl_match.
         unfold example2_depth_n_state.
         right.
@@ -378,7 +378,6 @@ Proof.
         eexists.
         eexists.
         eexists.
-        eexists.
         split; [ solve [eauto] | ].
         unfold build_venv_called.
         cbn.
@@ -407,7 +406,8 @@ Proof.
       simpl.
       right.
       f_equal.
-      eexists.
+      inversion act_cont_eq; subst.
+
       eexists.
       eexists.
       eexists.
@@ -442,7 +442,6 @@ Proof.
       simpl.
       right.
       f_equal.
-      eexists.
       eexists.
       eexists.
       eexists.

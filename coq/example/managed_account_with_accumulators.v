@@ -344,8 +344,8 @@ Ltac reduce_constant :=
 Ltac middle :=
   match goal with
     | [ |- ProgramToWorld _ _ _ _ = ProgramStepRunOut \/
-           exists _, exists _, exists _, exists _, _ ] =>
-      right; eexists; eexists; eexists; eexists; split; [ reflexivity | ]
+           exists _, exists _, exists _, _ ] =>
+      right
   end.
 
 Ltac e :=
@@ -487,6 +487,16 @@ Proof.
 
         inversion a_sem; subst.
         clear a_sem.
+
+        eexists.
+        eexists.
+        eexists.
+        split.
+        {
+          reflexivity.
+        }
+
+
         cbn.
         unfold managed_account_with_accumulators_storage.
         set (prev_income := storage_load _ _).
@@ -589,8 +599,16 @@ Proof.
                   intro balance_small.
                   rewrite balance_small in a_sem.
                   execute.
-                  e.
                   inversion a_sem; subst.
+
+                  eexists.
+                  eexists.
+                  eexists.
+                  split.
+                  { reflexivity. }
+                  cbn.
+                  e.
+
                   apply managed_account_with_accumulators_correct.
                   finisher.
                 }
@@ -598,10 +616,28 @@ Proof.
                   intro balance_big.
                   rewrite balance_big in a_sem.
                   execute.
+                  inversion a_sem; subst.
+                  clear a_sem.
+                  eexists.
+                  eexists.
+                  eexists.
+                  split.
                   {
                     cbn.
-                    inversion a_sem; subst.
-                    clear a_sem.
+                    f_equal.
+                    f_equal.
+                    f_equal.
+                    {
+                      rewrite cut_memory_zero_nil.
+                      reflexivity.
+                    }
+                    {
+                      reflexivity.
+                    }
+                  }
+
+                  {
+                    cbn.
                     rewrite address_eq_refl.
 
                     cbn.
@@ -689,6 +725,15 @@ Proof.
                 rewrite wrong_owner in a_sem.
 
                 inversion a_sem; subst.
+                clear a_sem.
+                eexists.
+                eexists.
+                eexists.
+                split.
+                {
+                  reflexivity.
+                }
+                cbn.
                 e.
                 apply managed_account_with_accumulators_correct.
                 assumption.
@@ -705,9 +750,14 @@ Proof.
               intros data_short _.
               rewrite data_short in a_sem.
               execute.
+              inversion a_sem; subst.
+              eexists.
+              eexists.
+              eexists.
+              split.
+              { reflexivity. }
               cbn.
               rewrite address_eq_refl.
-              inversion a_sem; subst.
               apply managed_account_with_accumulators_correct.
               assumption.
             }
@@ -723,6 +773,12 @@ Proof.
           rewrite value_nonzero in a_sem.
           execute.
           inversion a_sem; subst.
+          eexists.
+          eexists.
+          eexists.
+          split.
+          { reflexivity. }
+
           cbn.
           rewrite address_eq_refl.
           apply managed_account_with_accumulators_correct.
@@ -756,6 +812,10 @@ Proof.
     execute.
     simpl.
     middle.
+    eexists.
+    eexists.
+    eexists.
+    split; try reflexivity.
 
     unfold managed_account_with_accumulators_account_state in managed_account_with_accumulators_correct.
     simpl.
@@ -795,6 +855,10 @@ Proof.
     execute.
     if_judge.
     execute.
+    eexists.
+    eexists.
+    eexists.
+    split; try reflexivity.
     cbn.
     rewrite storage_eq.
     rewrite balance_eq.

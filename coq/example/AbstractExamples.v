@@ -288,7 +288,6 @@ Section Example1Continue.
         eexists.
         eexists.
         eexists.
-        eexists.
         auto.
         split; [eauto | ].
         apply example1_spec_impl_match.
