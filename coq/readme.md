@@ -1,5 +1,7 @@
 # Formal Verification of EVM Bytecodes
 
+The main efforts have been moved to https://github.com/pirapira/eth-isabelle
+
 ## Contents
 This directory contains
 * a framework for specifying an Ethereum contract
@@ -11,6 +13,7 @@ This directory contains
 Don’t take it seriously yet: I haven’t checked anything
 against the real implementations.
 This project is still in an elementary stage.  I'd like to
+* fix the broken files
 * explore strategies modelling the infinite process
   (an Ethereum contract goes through unlimited number of events),
 * translate more parts of the yellow paper: more instructions,

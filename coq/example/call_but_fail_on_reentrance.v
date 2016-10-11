@@ -24,6 +24,7 @@ Definition example2_program : program :=
         PUSH1 (word_of_N 0) ::
         PUSH1 (word_of_N 0) ::
         PUSH1 (word_of_N 0) ::
+        PUSH1 (word_of_N 0) ::
         CALL ::
         ISZERO ::
         PUSH1 (word_of_N 0) ::
@@ -264,36 +265,15 @@ Proof.
       unfold storage_load.
       unfold empty_storage.
       simpl.
-      repeat (case s as [| s]; [ solve [left; auto] | ]).
-      simpl.
-      compute_word_mod.
-      set (sm0 := word_smaller _ 0%Z).
-      assert (H : sm0 = false).
-      {
-        unfold sm0.
-        unfold word_smaller.
-        simpl.
-        rewrite ZModulo.spec_compare.
-        set (v0 := (ZModulo.to_Z _ _)%Z).
-        assert (0 <= v0)%Z.
-        {
-          apply (ZModulo.spec_to_Z_1).
-          unfold ALEN.p.
-          congruence.
-        }
-        set (comparison := (_ ?= _)%Z).
-        case_eq comparison; try congruence.
-        unfold comparison.
-        rewrite Z.compare_nge_iff.
-        intro H'.
-        apply False_ind.
-        apply H'.
-        apply H.
-      }
-      rewrite H.
+      repeat (case s as [| s]; [ solve [left; auto] | cbn ]).
       right.
       inversion next; subst.
       clear next.
+      rewrite get_update_balance.
+      admit.
+      Admitted.
+(*
+
       eexists.
       eexists.
       eexists.
@@ -454,3 +434,4 @@ Proof.
     }
   }
 Qed.
+********)

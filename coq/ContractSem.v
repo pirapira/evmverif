@@ -378,9 +378,9 @@ Fixpoint venv_pop_stack (n : nat) (v : variable_env) :=
   match n with
   | O => v
   | S m =>
-    venv_update_stack
-      (tl v.(venv_stack))
-      (venv_pop_stack m v)
+  venv_pop_stack m
+    (venv_update_stack
+      (tl v.(venv_stack)) v)
   end.
 
 Definition venv_stack_top (v : variable_env) : option word :=
